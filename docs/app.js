@@ -193,6 +193,12 @@ const memoryButtons=memoryLabels.map((label,index)=>{
   button.onclick=()=>command('note',index);
   $('memory-targets').append(button);return button;
 });
+$('glade-listen').onclick=()=>command('listen');
+$('memory-settings').onclick=()=>{
+  const expanded=$('memory-settings').getAttribute('aria-expanded')!=='true';
+  $('memory-settings').setAttribute('aria-expanded',String(expanded));
+  $('game-screen').classList.toggle('memory-settings-open',expanded);
+};
 let memoryInputBlocked=true;
 window.addEventListener('keydown',event=>{
   if($('game-screen').hidden||activeLesson?.stage!==2||!/^Digit[1-8]$/.test(event.code)||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
@@ -207,6 +213,14 @@ function updateMemory(state) {
   $('camera-mode').hidden=memory;
   $('memory-targets').hidden=!memory||state.transitioning;
   memoryInputBlocked=!memory||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase!=='answer';
+  const glade=$('glade-listen');
+  glade.hidden=!memory||state.transitioning||state.lesson.phase==='complete';
+  glade.disabled=state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase==='listening'||state.lesson.phase==='complete';
+  $('glade-prompt').textContent=state.lesson.phase==='listening'?'♪ Listening…':(state.lesson.phase==='answer'?'Listen again':'Tap to listen');
+  glade.setAttribute('aria-label',state.lesson.phase==='answer'?'Hear the melody again at the Listening Glade':'Listen to the melody at the Listening Glade');
+  const centre=state.glade_target;
+  if(centre?.length){glade.style.left=`${centre[0]*100}%`;glade.style.top=`${centre[1]*100}%`;glade.style.width=`${centre[2]*100}%`;}
+  $('memory-settings').hidden=!memory;
   memoryButtons.forEach((button,i)=>{
     button.disabled=memoryInputBlocked;
     const point=state.targets?.[i];
@@ -229,14 +243,14 @@ window.groveState = state => {
   updateMemory(state);
   $('path-transition').hidden=!state.transitioning;
   $('path-destination').textContent=state.transitioning?`Entering ${['','Echo meadow','Canopy concert'][lesson.stage]}…`:'';
-  $('lesson-title').textContent=`0${lesson.stage} · ${lesson.title}`;
+  $('lesson-title').textContent=lesson.stage===2?`Echo meadow · Melody ${Math.min(lesson.round,3)}/3`:`0${lesson.stage} · ${lesson.title}`;
   $('stage-score').textContent=`${lesson.score} pts`;
   $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 gems collected · 80 points to unlock stage 2` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
   $('lesson-progress').max=lesson.stage===1?8:3;
   $('lesson-progress').value=lesson.stage===1?lesson.collected:(lesson.phase==='complete'?3:lesson.round-1);
   $('note-action').dataset.command=lesson.stage===1?'repeat':'choose';
   $('note-action').textContent=lesson.stage===1?'♪ Play note':'✓ Choose note';
-  $('listen').hidden=lesson.stage===1;
+  $('listen').hidden=lesson.stage!==3;
   $('listen').textContent=lesson.phase==='listening'?'Listening…':(lesson.phase==='answer'?'♪ Hear melody again':'♪ Listen to melody');
   const locked=state.paused||state.transitioning||lesson.phase==='listening'||lesson.phase==='complete';
   ['back','next'].forEach(name=>document.querySelector(`[data-command="${name}"]`).disabled=locked);

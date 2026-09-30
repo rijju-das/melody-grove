@@ -27,7 +27,13 @@ func run() -> void:
 	check(not game.native_choose_button.visible, "No native Choose button")
 	game.request_note(0)
 	check(not game.hopping, "Listen is required before answering")
-	game.listen_melody()
+	var tap := InputEventMouseButton.new()
+	tap.button_index = MOUSE_BUTTON_LEFT
+	tap.pressed = true
+	tap.position = camera.unproject_position(game.memory_arena.center)
+	game._unhandled_input(tap)
+	check(game.lesson.phase == "listening", "Tapping the centre glade starts playback")
+	check(game._glade_target().size() == 3, "Web receives the projected glade target")
 	game._process(0.01)
 	check(game.memory_arena.rings[0].visible, "Demo lights Do")
 	game.request_note(7)

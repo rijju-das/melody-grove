@@ -67,6 +67,10 @@ var native_markers: Label
 var native_step_row: HBoxContainer
 var native_choose_button: Button
 var native_hint: Label
+var native_glade: Button
+var native_stages: HBoxContainer
+var native_repeat: Button
+var native_listen: Button
 var native_panel: PanelContainer
 
 func _ready() -> void:
@@ -190,10 +194,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if OS.has_feature("web") and status:
-		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok, "attempt": attempt_id, "reward": last_reward, "overview": camera.overview, "camera_wide": camera.is_overview(), "transitioning": transitioning, "memory_marks": memory_marks, "recovering": memory_return_delay > 0, "targets": _memory_targets()})
+		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok, "attempt": attempt_id, "reward": last_reward, "overview": camera.overview, "camera_wide": camera.is_overview(), "transitioning": transitioning, "memory_marks": memory_marks, "recovering": memory_return_delay > 0, "targets": _memory_targets(), "glade_target": _glade_target()})
 		if state != web_last_state:
 			web_last_state = state
 			JavaScriptBridge.eval("window.groveState && window.groveState(" + state + ")")
+	if native_glade:
+		native_glade.visible = lesson.stage == 2 and not transitioning and lesson.phase != "complete"
+		native_glade.disabled = paused or hopping or memory_return_delay > 0 or lesson.phase in ["listening", "complete"]
+		native_glade.text = "♪ Listening…" if lesson.phase == "listening" else ("Listen again\n↓" if lesson.phase == "answer" else "Tap to listen\n↓")
+		native_glade.position = camera.unproject_position(memory_arena.center) - Vector2(80, 95)
 	if player == null or paused:
 		return
 	if transitioning:
@@ -303,6 +312,13 @@ func _start_memory_hop(target: int) -> void:
 	var facing := route[target] - hop_start
 	if facing.length() > 0.01: player.rotation.y = atan2(facing.x, facing.z)
 
+func _glade_target() -> Array:
+	if lesson.stage != 2 or transitioning: return []
+	var viewport_size := get_viewport().get_visible_rect().size
+	var point := camera.unproject_position(memory_arena.center)
+	var edge := camera.unproject_position(memory_arena.center + camera.global_basis.x * 1.25)
+	return [snappedf(point.x / viewport_size.x, 0.0001), snappedf(point.y / viewport_size.y, 0.0001), snappedf(point.distance_to(edge) * 2.0 / viewport_size.x, 0.0001)]
+
 func _memory_targets() -> Array:
 	var targets: Array = []
 	if lesson.stage != 2 or transitioning: return targets
@@ -319,6 +335,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: point = event.position
 	elif event is InputEventScreenTouch and event.pressed: point = event.position
 	else: return
+	var centre_screen := camera.unproject_position(memory_arena.center)
+	var centre_radius := centre_screen.distance_to(camera.unproject_position(memory_arena.center + camera.global_basis.x * 1.25))
+	if point.distance_to(centre_screen) <= centre_radius:
+		listen_melody()
+		get_viewport().set_input_as_handled()
+		return
 	for i in range(pads.size()):
 		var screen := camera.unproject_position(pads[i].global_position)
 		var radius := screen.distance_to(camera.unproject_position(pads[i].global_position + camera.global_basis.x * 1.05))
@@ -354,7 +376,7 @@ func repeat_note() -> void:
 	if paused or hopping or lesson.phase in ["listening", "complete"]:
 		return
 	if route_index == 0:
-		status.text = "Tap Listen to watch the melody." if lesson.stage == 2 else "Hop onto the first step to hear Do."
+		status.text = "Tap the Listening Glade to hear the melody." if lesson.stage == 2 else "Hop onto the first step to hear Do."
 	else:
 		_play_note(route_index - 1)
 
@@ -407,7 +429,7 @@ func start_stage(number: int, arriving := false) -> void:
 		collectibles[i].global_position = pad.global_position + Vector3.UP * 1.15
 	memory_marks = 0
 	memory_return_delay = 0
-	memory_return_text = "Tap Listen to watch the melody."
+	memory_return_text = "Tap the Listening Glade to hear the melody."
 	memory_arena.reset()
 	attempt_id += 1
 	success_audio.stop()
@@ -422,7 +444,7 @@ func start_stage(number: int, arriving := false) -> void:
 	demo_elapsed = 0
 	for orb in collectibles: orb.visible = number == 1
 	status.text = "Collect all 8 golden gems · 10 points each" if number == 1 else "Tap Listen, remember the melody, then choose its notes."
-	if number == 2: status.text = "Tap Listen. Watch the glowing notes, then jump to repeat them."
+	if number == 2: status.text = "Tap the centre glade. Watch, then jump to repeat the melody."
 	_update_lesson_hud()
 
 func advance_stage() -> void:
@@ -467,7 +489,7 @@ func _walk_to_next_stage(delta: float) -> void:
 		if travel_index >= travel_points.size(): start_stage(next_stage, true)
 
 func listen_melody() -> void:
-	if paused or hopping or memory_return_delay > 0 or not lesson.listen(): return
+	if paused or hopping or transitioning or memory_return_delay > 0 or not lesson.listen(): return
 	queued_direction = 0
 	demo_index = 0
 	demo_elapsed = 0
@@ -499,11 +521,11 @@ func choose_note(from_landing := false) -> void:
 		if result == "retry":
 			memory_arena.wobble(route_index - 1)
 			memory_return_delay = 0.60
-			memory_return_text = "Try again from the first note. Listen again whenever you need."
+			memory_return_text = "Try again, or tap the centre glade to listen again."
 			status.text = "Not quite! Back to the centre for another try."
 		elif result == "round":
 			memory_return_delay = 0.45
-			memory_return_text = "Melody complete! Tap Listen for melody %d of 3." % (lesson.round_index + 1)
+			memory_return_text = "Melody complete! Tap the glade for melody %d of 3." % (lesson.round_index + 1)
 	_update_lesson_hud()
 	_check_completion()
 
@@ -560,7 +582,12 @@ func _save_progress() -> void:
 
 func _update_lesson_hud() -> void:
 	if native_markers:
-		native_panel.offset_top = -265 if lesson.stage == 2 else -230
+		native_panel.offset_top = -172 if lesson.stage == 2 else -230
+		native_stages.visible = lesson.stage != 2
+		native_hint.visible = lesson.stage != 2
+		native_repeat.visible = lesson.stage != 2
+		native_listen.visible = lesson.stage != 2
+		lesson_label.visible = lesson.stage != 2
 		native_markers.visible = lesson.stage == 2
 		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat(3 - memory_marks)
 		native_step_row.visible = lesson.stage != 2
@@ -716,6 +743,7 @@ func _make_hud() -> void:
 	lesson_label.add_theme_font_size_override("font_size", 23)
 	box.add_child(lesson_label)
 	var stages := HBoxContainer.new()
+	native_stages = stages
 	stages.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_child(stages)
 	for i in range(3): stage_buttons.append(_button(stages, "Stage %d" % (i+1), start_stage.bind(i+1)))
@@ -743,9 +771,9 @@ func _make_hud() -> void:
 	row.add_child(native_step_row)
 	_button(native_step_row, "← Back", request_step.bind(-1))
 	_button(native_step_row, "Next →", request_step.bind(1))
-	_button(row, "Repeat · Space", repeat_note)
+	native_repeat = _button(row, "Repeat · Space", repeat_note)
 	native_choose_button = _button(row, "Choose", choose_note)
-	_button(row, "Listen", listen_melody)
+	native_listen = _button(row, "Listen", listen_melody)
 	_button(row, "Retry", func(): start_stage(lesson.stage))
 	pause_button = _button(row, "Pause · P", toggle_pause)
 	var volume_label := Label.new()
@@ -760,6 +788,16 @@ func _make_hud() -> void:
 	volume.focus_mode = Control.FOCUS_NONE
 	volume.value_changed.connect(_set_volume)
 	row.add_child(volume)
+	if not OS.has_feature("web"):
+		native_glade = Button.new()
+		layer.add_child(native_glade)
+		native_glade.size = Vector2(160, 100)
+		native_glade.add_theme_font_size_override("font_size", 23)
+		native_glade.add_theme_color_override("font_color", Color("ffdf81"))
+		native_glade.add_theme_color_override("font_disabled_color", Color("f5eccb"))
+		for state in ["normal", "hover", "pressed", "disabled"]:
+			native_glade.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		native_glade.pressed.connect(listen_melody)
 	_make_success_overlay(layer)
 
 func _make_success_overlay(layer: CanvasLayer) -> void:

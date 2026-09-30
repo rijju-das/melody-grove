@@ -19,7 +19,7 @@ const fs=require('node:fs');
      s=await state();
    }
  };
- const listen=async()=>{await page.locator('#listen').tap();await wait(()=>window.testState?.lesson.phase==='answer');};
+ const listen=async()=>{await page.locator((await state()).lesson.stage===2?'#glade-listen':'#listen').tap();await wait(()=>window.testState?.lesson.phase==='answer');};
  const answer=async(notes)=>{
    for(const note of notes){
      const memory=(await state()).lesson.stage===2;

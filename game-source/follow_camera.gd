@@ -35,8 +35,8 @@ func _update_camera(delta: float) -> void:
 		target = controller.memory_arena.center + Vector3.UP * 0.7
 		target_size = maxf(16.8, 14.0 * aspect)
 		if not OS.has_feature("web"):
-			target_size = maxf(18.0, 16.0 * aspect)
-			target -= global_basis.y * 2.0
+			target_size = maxf(18.0, 14.0 * aspect)
+			target -= global_basis.y * 1.1
 	elif is_overview():
 		target = (controller.route[0] + controller.route[-1]) * 0.5
 		target_size = maxf(32.0, 22.0 * aspect)

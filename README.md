@@ -47,7 +47,9 @@ section. After stage three, the success card returns to the journey menu.
    to repeat each sequence. Low Do (C4) and high Do (C5) are labelled separately.
 3. **Canopy concert:** reproduce three melodies of four notes each.
 
-In stage 2, tap **Listen**, then jump to the notes in order. You can jump from any
+In stage 2, tap the **Listening Glade** in the centre (follow the arrow), then
+jump to the notes in order. Tap the glade again to replay, or press L. The compact
+bottom bar shows progress and pause; the settings button reveals retry and volume. You can jump from any
 platform to any other, including jumping in place to repeat the same note.
 Three markers show your progress. A wrong note gives a gentle wobble and returns
 you to the centre; only the current sequence resets. Completed melodies and
