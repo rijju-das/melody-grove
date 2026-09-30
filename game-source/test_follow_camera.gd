@@ -19,6 +19,19 @@ func run() -> void:
 	camera.set_process(false)
 	game.lesson = load("res://lesson.gd").new()
 	game.start_stage(1)
+	var tap := InputEventScreenTouch.new()
+	tap.pressed = true
+	tap.position = camera.unproject_position(game.pads[3].global_position)
+	game._unhandled_input(tap)
+	check(game.hopping and game.destination == 4, "Stage one accepts platform touches")
+	game.request_note(6)
+	check(game.destination == 4, "A second tap cannot change an in-flight jump")
+	for frame in range(40): game._process(1.0 / 60.0)
+	check(game.lesson.score == 10 and game.lesson.collected == [3], "Direct jump collects only the destination gem")
+	game.request_note(3)
+	for frame in range(40): game._process(1.0 / 60.0)
+	check(game.lesson.score == 10, "Tapping the current platform does not duplicate points")
+	game.start_stage(1)
 	var initial: Vector3 = camera.position
 	var initial_size: float = camera.size
 	for step in range(1, 8):

@@ -236,7 +236,7 @@ func _process(delta: float) -> void:
 	cooldown = maxf(0, cooldown - delta)
 	if lesson.stage == 2 and memory_return_delay > 0:
 		memory_return_delay = maxf(0, memory_return_delay - delta)
-		if memory_return_delay == 0: _start_memory_hop(0)
+		if memory_return_delay == 0: _start_note_hop(0)
 		return
 	if hopping:
 		_process_hop(delta)
@@ -299,11 +299,12 @@ func request_step(direction: int) -> void:
 	status.text = "Hopping to %s…" % NOTE_NAMES[target - 1] if target > 0 else "Returning to the starting stump…"
 
 func request_note(index: int) -> void:
-	if lesson.stage != 2 or lesson.phase != "answer" or paused or hopping or transitioning or memory_return_delay > 0 or index < 0 or index > 7: return
-	_start_memory_hop(index + 1)
+	if lesson.stage not in [1, 2] or paused or hopping or transitioning or memory_return_delay > 0 or index < 0 or index > 7: return
+	if lesson.phase == "complete" or (lesson.stage == 2 and lesson.phase != "answer"): return
+	_start_note_hop(index + 1)
 	status.text = "Jumping to %s…" % NOTE_NAMES[index]
 
-func _start_memory_hop(target: int) -> void:
+func _start_note_hop(target: int) -> void:
 	destination = target
 	hop_start = player.global_position
 	hop_elapsed = 0
@@ -321,7 +322,7 @@ func _glade_target() -> Array:
 
 func _memory_targets() -> Array:
 	var targets: Array = []
-	if lesson.stage != 2 or transitioning: return targets
+	if lesson.stage not in [1, 2] or transitioning: return targets
 	var viewport_size := get_viewport().get_visible_rect().size
 	for pad in pads:
 		var point := camera.unproject_position(pad.global_position)
@@ -330,14 +331,14 @@ func _memory_targets() -> Array:
 	return targets
 
 func _unhandled_input(event: InputEvent) -> void:
-	if OS.has_feature("web") or lesson.stage != 2: return
+	if OS.has_feature("web") or lesson.stage not in [1, 2]: return
 	var point: Vector2
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: point = event.position
 	elif event is InputEventScreenTouch and event.pressed: point = event.position
 	else: return
 	var centre_screen := camera.unproject_position(memory_arena.center)
 	var centre_radius := centre_screen.distance_to(camera.unproject_position(memory_arena.center + camera.global_basis.x * 1.25))
-	if point.distance_to(centre_screen) <= centre_radius:
+	if lesson.stage == 2 and point.distance_to(centre_screen) <= centre_radius:
 		listen_melody()
 		get_viewport().set_input_as_handled()
 		return
@@ -443,7 +444,7 @@ func start_stage(number: int, arriving := false) -> void:
 	demo_index = 0
 	demo_elapsed = 0
 	for orb in collectibles: orb.visible = number == 1
-	status.text = "Collect all 8 golden gems · 10 points each" if number == 1 else "Tap Listen, remember the melody, then choose its notes."
+	status.text = "Tap a platform to jump and collect its gem · 10 points each" if number == 1 else "Tap Listen, remember the melody, then choose its notes."
 	if number == 2: status.text = "Tap the centre glade. Watch, then jump to repeat the melody."
 	_update_lesson_hud()
 
@@ -497,7 +498,7 @@ func listen_melody() -> void:
 	if lesson.stage == 2:
 		memory_marks = 0
 		memory_arena.clear_lights()
-		if route_index != 0: _start_memory_hop(0)
+		if route_index != 0: _start_note_hop(0)
 		_update_lesson_hud()
 
 func choose_note(from_landing := false) -> void:

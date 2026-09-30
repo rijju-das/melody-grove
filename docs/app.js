@@ -211,7 +211,8 @@ function updateMemory(state) {
   document.querySelector('.step-buttons').hidden=memory;
   $('memory-markers').hidden=!memory;
   $('camera-mode').hidden=memory;
-  $('memory-targets').hidden=!memory||state.transitioning;
+  const tappable=state.lesson.stage===1||memory;
+  $('memory-targets').hidden=!tappable||state.transitioning;
   memoryInputBlocked=!memory||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase!=='answer';
   const glade=$('glade-listen');
   glade.hidden=!memory||state.transitioning||state.lesson.phase==='complete';
@@ -222,8 +223,10 @@ function updateMemory(state) {
   if(centre?.length){glade.style.left=`${centre[0]*100}%`;glade.style.top=`${centre[1]*100}%`;glade.style.width=`${centre[2]*100}%`;}
   $('memory-settings').hidden=!memory;
   memoryButtons.forEach((button,i)=>{
-    button.disabled=memoryInputBlocked;
+    button.disabled=!tappable||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase==='complete'||(memory&&state.lesson.phase!=='answer');
+    button.setAttribute('aria-label',memory?`Jump to ${memoryLabels[i]} (key ${i+1})`:`Jump to ${memoryLabels[i]} and hear its note`);
     const point=state.targets?.[i];
+    button.hidden=!point||point[0]<0||point[0]>1||point[1]<0||point[1]>1;
     if(point){button.style.left=`${point[0]*100}%`;button.style.top=`${point[1]*100}%`;button.style.width=`${point[2]*100}%`;}
   });
   $('memory-markers').setAttribute('aria-label',`${state.memory_marks||0} of 3 notes correct`);

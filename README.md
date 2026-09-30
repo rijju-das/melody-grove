@@ -12,6 +12,10 @@ Touch controls work in portrait and landscape. On a computer, use arrow keys or
 WASD to hop, Space to hear a note, Enter to choose it, L to hear the melody, R to
 retry the stage, P to pause, and C to switch between follow and wide views. Singing is optional; no microphone is recorded.
 
+In stage 1, tap any visible note platform to jump directly to it, hear the note,
+and collect its gem. Tapping a collected platform plays its note again without
+adding duplicate points. Back/Next and keyboard movement also remain available.
+
 In stage 2, click/tap any note platform or press **1–8** to jump directly to it.
 Landing chooses that note automatically. The camera keeps the whole circle in view.
 
