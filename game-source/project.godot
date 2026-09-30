@@ -11,7 +11,8 @@ config_version=5
 [application]
 
 config/name="Melody Grove"
-run/main_scene="uid://dsu1xralvp8wx"
+run/main_scene="res://main.tscn"
+run/max_fps.web=30
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 

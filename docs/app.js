@@ -1,14 +1,56 @@
 const $ = (id) => document.getElementById(id);
 let gameStarted = false, starting = false, paused = false, installPrompt = null;
 const audioContexts = [];
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
 if (window.AudioContext) {
   window.AudioContext = new Proxy(window.AudioContext, {construct(Target, args) {
     const context = new Target(...args); audioContexts.push(context); return context;
   }});
 }
-window.addEventListener('pointerdown', () => audioContexts.forEach(context => {
-  if (context.state === 'suspended') context.resume().catch(() => {});
-}), {passive:true});
+const unlockAudio = () => audioContexts.forEach(context => {
+  if (context.state !== 'running' && context.state !== 'closed') context.resume().catch(() => {});
+});
+window.addEventListener('pointerdown', unlockAudio, {passive:true});
+window.addEventListener('keydown', unlockAudio);
+let soundCheckContext;
+$('sound-check').onclick = async () => {
+  try {
+    soundCheckContext ||= new AudioContext();
+    await soundCheckContext.resume();
+    const note=soundCheckContext.createOscillator(), gain=soundCheckContext.createGain();
+    note.frequency.value=261.63;gain.gain.setValueAtTime(0.08,soundCheckContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,soundCheckContext.currentTime+0.6);
+    note.connect(gain).connect(soundCheckContext.destination);note.start();note.stop(soundCheckContext.currentTime+0.6);
+    $('sound-hint').textContent='Playing Do · check your phone volume';
+  } catch {$('sound-hint').textContent='Turn Silent Mode off and tap again.';}
+};
+const PROGRESS_KEY='melody-grove-progress-v1';
+let completedShown=false, activeLesson=null, pendingStage=1;
+let memoryProgress=null;
+function readProgress() {
+  if(memoryProgress) return memoryProgress;
+  try {const value=JSON.parse(localStorage.getItem(PROGRESS_KEY));return value?.version===1&&Array.isArray(value.records)&&value.records.length===3 ? value : null;} catch {return null;}
+}
+window.groveLoadProgress=()=>JSON.stringify(readProgress());
+window.groveSaveProgress=text=>{
+  try {memoryProgress=JSON.parse(text);localStorage.setItem(PROGRESS_KEY,text);updateStageMenu();return true;} catch {updateStageMenu();return false;}
+};
+function updateStageMenu() {
+  const records=readProgress()?.records||[];
+  let unlocked=1,total=0;
+  for(let i=0;i<3;i++) {
+    const record=records[i];
+    if(record?.complete&&i<unlocked){total+=Math.max(0,Number(record.score)||0);unlocked=Math.min(3,i+2);}
+    const button=document.querySelector(`[data-stage="${i+1}"]`);
+    button.disabled=i+1>unlocked;
+    button.querySelector('.stage-result').textContent=record?.complete ? `${'★'.repeat(Math.min(3,Math.max(1,Number(record.stars)||1)))} · Best: ${Number(record.score)||0} points` : (i+1<=unlocked?'Play stage →':`Finish stage ${i} to unlock`);
+  }
+  $('best-total').textContent=`${total} points saved`;
+  pendingStage=unlocked;
+  $('play').firstChild.textContent=unlocked>1?'Continue your journey ':'Start your journey ';
+}
+document.querySelectorAll('[data-stage]').forEach(button=>button.onclick=()=>play(Number(button.dataset.stage)));
+updateStageMenu();
 const resizeCanvas = () => {
   const bounds = $('stage').getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
@@ -96,19 +138,52 @@ window.groveState = state => {
   $('note-status').textContent=state.text.replace(' · Space to repeat','').replace('Paused · press P or click Resume','Paused · tap Resume to continue').replace('Free play · use the arrow keys to continue','Hop onto a step, listen, then sing along').replace('At the start · press Up, Right, W or D','At the start · tap Next to hear Do');
   $('pause').textContent=paused?'Resume':'Pause';
   $('step-count').textContent=state.step?`NOTE ${state.step} / 8`:'START';
+  if (!state.lesson) return;
+  const lesson=state.lesson;activeLesson=lesson;
+  $('lesson-title').textContent=`0${lesson.stage} · ${lesson.title}`;
+  $('stage-score').textContent=`${lesson.score} pts`;
+  $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 golden notes collected · 80 points to unlock stage 2` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
+  $('lesson-progress').max=lesson.stage===1?8:3;
+  $('lesson-progress').value=lesson.stage===1?lesson.collected:(lesson.phase==='complete'?3:lesson.round-1);
+  $('note-action').dataset.command=lesson.stage===1?'repeat':'choose';
+  $('note-action').textContent=lesson.stage===1?'♪ Play note':'✓ Choose note';
+  $('listen').hidden=lesson.stage===1;
+  $('listen').textContent=lesson.phase==='listening'?'Listening…':(lesson.phase==='answer'?'♪ Hear melody again':'♪ Listen to melody');
+  const locked=state.paused||lesson.phase==='listening'||lesson.phase==='complete';
+  ['back','next'].forEach(name=>document.querySelector(`[data-command="${name}"]`).disabled=locked);
+  $('note-action').disabled=locked||state.hopping||state.step===0||(lesson.stage>1&&lesson.phase!=='answer');
+  $('listen').disabled=locked||state.hopping;
+  $('pause').disabled=lesson.phase==='complete';
+  if(lesson.phase==='complete'&&!completedShown) {
+    completedShown=true;
+    $('complete-eyebrow').textContent=lesson.stage===3?'JOURNEY COMPLETE':'STAGE COMPLETE';
+    $('earned-stars').textContent='★ '.repeat(lesson.stars)+'☆ '.repeat(3-lesson.stars);
+    $('earned-stars').setAttribute('aria-label',`${lesson.stars} of 3 stars`);
+    $('complete-title').textContent=['You found your first octave!','Your musical memory is growing!','The canopy is yours!'][lesson.stage-1];
+    $('complete-summary').textContent=`${lesson.score} points · ${lesson.stage===1?'8 notes collected':lesson.mistakes+' mistakes'}. ${lesson.stage<3?'Your next stage is unlocked.':'Replay any stage to improve your stars.'}`;
+    $('save-result').textContent=state.saved?'Best score and stage unlock saved on this device.':'Your browser could not save progress. Keep this tab open to continue.';
+    $('continue-stage').textContent=lesson.stage<3?'Next stage →':'Back to your journey';
+    $('complete-dialog').showModal();
+  } else if(lesson.phase!=='complete') {completedShown=false;if($('complete-dialog').open)$('complete-dialog').close();}
 };
 function command(name,value) {if (typeof window.groveCommand==='function') window.groveCommand(name,value);}
 document.querySelectorAll('[data-command]').forEach(button=>button.onclick=()=>command(button.dataset.command));
 $('volume').oninput=event=>command('volume',Number(event.target.value));
-$('home').onclick=()=>{if (gameStarted && !paused) command('pause');$('game-screen').hidden=true;$('welcome').hidden=false;};
+function home() {if(gameStarted&&!paused)command('pause');$('complete-dialog').close();$('game-screen').hidden=true;$('welcome').hidden=false;updateStageMenu();window.scrollTo(0,0);}
+$('home').onclick=home;
+$('journey-home').onclick=home;
+$('complete-dialog').addEventListener('cancel',event=>event.preventDefault());
+$('continue-stage').onclick=()=>{if(activeLesson.stage<3){$('complete-dialog').close();command('stage',activeLesson.stage+1);}else home();};
+$('replay-stage').onclick=()=>{$('complete-dialog').close();command('stage',activeLesson.stage);};
 $('fullscreen').onclick=async()=>{
   try {if (document.fullscreenElement) await document.exitFullscreen();else if ($('game-screen').requestFullscreen) await $('game-screen').requestFullscreen();else {$('fullscreen').textContent='Turn phone sideways';}}
   catch {$('fullscreen').textContent='Turn phone sideways';}
 };
 
-async function play() {
+async function play(stageNumber=pendingStage) {
+  pendingStage=stageNumber;
   $('welcome').hidden=true;$('game-screen').hidden=false;window.scrollTo(0,0);
-  if (gameStarted) {if(paused) command('pause');return;}
+  if (gameStarted) {command('stage',stageNumber);return;}
   if (starting) return;
   starting=true;$('loading').hidden=false;$('retry').hidden=true;
   try {
@@ -118,11 +193,13 @@ async function play() {
     resizeCanvas();
     const engine=new Engine({...GROVE_CONFIG,canvas:$('canvas'),canvasResizePolicy:0,focusCanvas:false});
     await engine.startGame({onProgress:(current,total)=>{if(total>0){$('load-progress').value=current/total*100;$('load-message').textContent=`Opening the grove… ${Math.round(current/total*100)}%`;}}});
+    await new Promise((resolve,reject)=>{let attempts=0;const check=()=>{if(typeof window.groveCommand==='function')resolve();else if(attempts++>250)reject(new Error('The game did not finish starting. Please reload.'));else setTimeout(check,20);};check();});
     gameStarted=true;$('loading').hidden=true;document.querySelectorAll('[data-command]').forEach(button=>button.disabled=false);
+    command('stage',pendingStage);
     $('canvas').focus();saveOffline();
   } catch(error) {$('load-message').textContent=error.message;$('retry').hidden=false;$('load-progress').hidden=true;}
   finally {starting=false;}
 }
-$('play').onclick=play;$('retry').onclick=()=>{location.reload();};
+$('play').onclick=()=>play(pendingStage);$('retry').onclick=()=>{location.reload();};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameStarted&&!paused) command('pause');});
 saveOffline();

@@ -28,6 +28,14 @@ var limbs: Array[Node3D] = []
 var limb_rest: Array[Vector3] = []
 var web_callback: JavaScriptObject
 var web_last_state := ""
+var lesson = preload("res://lesson.gd").new()
+var demo_index := 0
+var demo_elapsed := 0.0
+var collectibles: Array[MeshInstance3D] = []
+var stage_buttons: Array[Button] = []
+var lesson_label: Label
+var saved_ok := true
+var status_before_pause := ""
 
 func _ready() -> void:
 	_bind_keys()
@@ -58,8 +66,10 @@ func _ready() -> void:
 	add_child(audio)
 	_make_sounds()
 	_make_halo()
+	_make_collectibles()
 	_make_hud()
-	reset_player()
+	_load_progress()
+	start_stage(1)
 	if OS.has_feature("web"):
 		get_node("GameControls").hide()
 		web_callback = JavaScriptBridge.create_callback(_web_command)
@@ -81,7 +91,11 @@ func _web_command(arguments: Array) -> void:
 		"next": request_step(1)
 		"back": request_step(-1)
 		"repeat": repeat_note()
-		"restart": reset_player()
+		"choose": choose_note()
+		"listen": listen_melody()
+		"stage":
+			if arguments.size() > 1: start_stage(int(arguments[1]))
+		"restart": start_stage(lesson.stage)
 		"pause": toggle_pause()
 		"volume":
 			if arguments.size() > 1:
@@ -92,6 +106,8 @@ func _bind_keys() -> void:
 		"grove_forward": [KEY_UP, KEY_RIGHT, KEY_W, KEY_D],
 		"grove_backward": [KEY_DOWN, KEY_LEFT, KEY_S, KEY_A],
 		"grove_repeat": [KEY_SPACE],
+		"grove_choose": [KEY_ENTER],
+		"grove_listen": [KEY_L],
 		"grove_restart": [KEY_R],
 		"grove_pause": [KEY_P, KEY_ESCAPE],
 	}
@@ -108,11 +124,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo() or player == null:
 		return
 	if event.is_action_pressed("grove_restart"):
-		reset_player()
+		start_stage(lesson.stage)
 	elif event.is_action_pressed("grove_pause"):
 		toggle_pause()
 	elif event.is_action_pressed("grove_repeat"):
 		repeat_note()
+	elif event.is_action_pressed("grove_choose"):
+		choose_note()
+	elif event.is_action_pressed("grove_listen"):
+		listen_melody()
 	elif event.is_action_pressed("grove_forward"):
 		request_step(1)
 	elif event.is_action_pressed("grove_backward"):
@@ -123,12 +143,27 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if OS.has_feature("web") and status:
-		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index})
+		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok})
 		if state != web_last_state:
 			web_last_state = state
 			JavaScriptBridge.eval("window.groveState && window.groveState(" + state + ")")
 	if player == null or paused:
 		return
+	if lesson.phase == "listening":
+		demo_elapsed -= delta
+		if demo_elapsed <= 0:
+			var melody: Array = lesson.melody()
+			if demo_index < melody.size():
+				_play_note(int(melody[demo_index]))
+				status.text = "Listen: %s (%d of %d)" % [NOTE_NAMES[melody[demo_index]], demo_index + 1, melody.size()]
+				demo_index += 1
+				demo_elapsed = 1.05
+			else:
+				lesson.demo_finished()
+				halo.hide()
+				status.text = "Your turn! Move to a note, then Choose note."
+		return
+	if lesson.phase == "complete": return
 	cooldown = maxf(0, cooldown - delta)
 	if hopping:
 		hop_elapsed = minf(HOP_SECONDS, hop_elapsed + delta)
@@ -146,6 +181,10 @@ func _process(delta: float) -> void:
 			_rest_limbs()
 			if route_index > 0:
 				_play_note(route_index - 1)
+				if lesson.explore(route_index - 1):
+					collectibles[route_index - 1].hide()
+					status.text = "+10 points! %s · %d of 8 notes found" % [NOTE_NAMES[route_index - 1], lesson.collected.size()]
+					_check_completion()
 			else:
 				halo.hide()
 				status.text = "Starting stump · hop forward to hear Do"
@@ -159,7 +198,7 @@ func _process(delta: float) -> void:
 			request_step(direction)
 
 func request_step(direction: int) -> void:
-	if paused or player == null:
+	if paused or player == null or lesson.phase in ["listening", "complete"]:
 		return
 	if hopping or cooldown > 0:
 		# Buffer one tap so quick presses feel responsive without a long queue.
@@ -201,7 +240,7 @@ func reset_player() -> void:
 		pause_button.text = "Pause · P"
 
 func repeat_note() -> void:
-	if paused or hopping:
+	if paused or hopping or lesson.phase in ["listening", "complete"]:
 		return
 	if route_index == 0:
 		status.text = "Hop onto the first step to hear Do."
@@ -209,11 +248,16 @@ func repeat_note() -> void:
 		_play_note(route_index - 1)
 
 func toggle_pause() -> void:
+	if lesson.phase == "complete": return
 	paused = not paused
 	queued_direction = 0
 	audio.stream_paused = paused
 	pause_button.text = "Resume · P" if paused else "Pause · P"
-	status.text = "Paused · press P or click Resume" if paused else "Free play · use the arrow keys to continue"
+	if paused:
+		status_before_pause = status.text
+		status.text = "Paused · tap Resume to continue"
+	else:
+		status.text = status_before_pause
 
 func _on_focus_lost() -> void:
 	# The web page owns touch controls outside the canvas. It pauses on tab hide.
@@ -231,8 +275,86 @@ func _play_note(index: int) -> void:
 	audio.play()
 	halo.global_position = pads[index].global_position + Vector3.UP * 0.16
 	halo.show()
-	status.text = "%s · listen, then sing it back · Space to repeat" % NOTE_NAMES[index]
+	status.text = "%s · listen, then sing it back" % NOTE_NAMES[index] if lesson.stage == 1 else "%s · Choose note to answer" % NOTE_NAMES[index]
 	note_played.emit(index)
+
+func start_stage(number: int) -> void:
+	if not lesson.begin(number): return
+	reset_player()
+	demo_index = 0
+	demo_elapsed = 0
+	for orb in collectibles: orb.visible = number == 1
+	status.text = "Collect all 8 golden notes · 10 points each" if number == 1 else "Tap Listen, remember the melody, then choose its notes."
+	_update_lesson_hud()
+
+func listen_melody() -> void:
+	if paused or hopping or not lesson.listen(): return
+	queued_direction = 0
+	demo_index = 0
+	demo_elapsed = 0
+	status.text = "Listen carefully…"
+
+func choose_note() -> void:
+	if paused or hopping or route_index == 0: return
+	var result: String = lesson.submit(route_index - 1)
+	if result == "ignored":
+		status.text = "Tap Listen before answering." if lesson.phase == "ready" else status.text
+		return
+	_play_note(route_index - 1)
+	match result:
+		"retry": status.text = "Try that melody again from its first note. Listen is always available."
+		"correct": status.text = "Correct! Choose note %d of %d." % [lesson.answer_index + 1, lesson.melody().size()]
+		"round": status.text = "Melody complete! Tap Listen for melody %d of 3." % [lesson.round_index + 1]
+	_update_lesson_hud()
+	_check_completion()
+
+func _check_completion() -> void:
+	_update_lesson_hud()
+	if lesson.phase != "complete": return
+	queued_direction = 0
+	_save_progress()
+	status.text = "Stage complete! %d points · %d stars · choose your next stage" % [lesson.score, lesson.stars]
+
+func _load_progress() -> void:
+	var content := ""
+	if OS.has_feature("web"):
+		var value: Variant = JavaScriptBridge.eval("window.groveLoadProgress ? window.groveLoadProgress() : ''")
+		if value is String: content = value
+	elif FileAccess.file_exists("user://grove-progress.json"):
+		content = FileAccess.get_file_as_string("user://grove-progress.json")
+	if not content.is_empty(): lesson.restore(JSON.parse_string(content))
+
+func _save_progress() -> void:
+	var content := JSON.stringify(lesson.progress())
+	if OS.has_feature("web"):
+		saved_ok = JavaScriptBridge.eval("window.groveSaveProgress && window.groveSaveProgress(" + JSON.stringify(content) + ")") == true
+	else:
+		var file := FileAccess.open("user://grove-progress.json", FileAccess.WRITE)
+		saved_ok = file != null
+		if file: file.store_string(content)
+
+func _update_lesson_hud() -> void:
+	if lesson_label:
+		lesson_label.text = "Stage %d: %s · %d points · Best total: %d" % [lesson.stage, lesson.TITLES[lesson.stage-1], lesson.score, lesson.total()]
+	for i in range(stage_buttons.size()): stage_buttons[i].disabled = i + 1 > lesson.unlocked()
+
+func _make_collectibles() -> void:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color("ffd578")
+	for pad in pads:
+		var orb := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.15
+		mesh.height = 0.30
+		mesh.radial_segments = 12
+		mesh.rings = 6
+		orb.mesh = mesh
+		orb.material_override = material
+		orb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(orb)
+		orb.global_position = pad.global_position + Vector3.UP * 0.65
+		collectibles.append(orb)
 
 func _make_sounds() -> void:
 	const RATE := 22050
@@ -279,7 +401,7 @@ func _make_hud() -> void:
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 22
 	panel.offset_right = -22
-	panel.offset_top = -146
+	panel.offset_top = -230
 	panel.offset_bottom = -16
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.18, 0.20, 0.96)
@@ -292,13 +414,21 @@ func _make_hud() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 7)
 	panel.add_child(box)
+	lesson_label = Label.new()
+	lesson_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lesson_label.add_theme_font_size_override("font_size", 23)
+	box.add_child(lesson_label)
+	var stages := HBoxContainer.new()
+	stages.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(stages)
+	for i in range(3): stage_buttons.append(_button(stages, "Stage %d" % (i+1), start_stage.bind(i+1)))
 	status = Label.new()
 	status.add_theme_font_size_override("font_size", 24)
 	status.add_theme_color_override("font_color", Color("fff0ce"))
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(status)
 	var hint := Label.new()
-	hint.text = "↑ / → / W / D: next step     ↓ / ← / S / A: back     Space: repeat     R: restart"
+	hint.text = "Arrows / WASD: hop · Space: hear note · Enter: choose · L: listen · R: retry stage"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_font_size_override("font_size", 19)
 	box.add_child(hint)
@@ -309,7 +439,9 @@ func _make_hud() -> void:
 	_button(row, "← Back", request_step.bind(-1))
 	_button(row, "Next →", request_step.bind(1))
 	_button(row, "Repeat · Space", repeat_note)
-	_button(row, "Restart · R", reset_player)
+	_button(row, "Choose", choose_note)
+	_button(row, "Listen", listen_melody)
+	_button(row, "Retry", func(): start_stage(lesson.stage))
 	pause_button = _button(row, "Pause · P", toggle_pause)
 	var volume_label := Label.new()
 	volume_label.text = "Volume"
@@ -327,7 +459,7 @@ func _make_hud() -> void:
 func _button(parent: Node, text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(120, 38)
+	button.custom_minimum_size = Vector2(100, 38)
 	button.add_theme_font_size_override("font_size", 18)
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(callback)

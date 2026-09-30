@@ -1,5 +1,20 @@
-const CACHE='melody-grove-e87acfbc91e9';
-const FILES=["./app.js", "./forest.png", "./game-config.js", "./game.apple-touch-icon.png", "./game.audio.position.worklet.js", "./game.audio.worklet.js", "./game.icon.png", "./game.js", "./game.pck", "./game.png", "./game.wasm.gz", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon.svg", "./index.html", "./manifest.webmanifest", "./style.css"];
+"""Package a Godot Web export as a self-contained installable website."""
+import gzip, hashlib, json, re
+from pathlib import Path
+
+root=Path(__file__).resolve().parent.parent
+public=root/'docs'
+html=(public/'game.html').read_text()
+config=json.loads(re.search(r'const GODOT_CONFIG = (.*?);',html).group(1))
+(public/'game-config.js').write_text('const GROVE_CONFIG = '+json.dumps(config)+';\n')
+wasm=public/'game.wasm'
+if wasm.exists():
+    (public/'game.wasm.gz').write_bytes(gzip.compress(wasm.read_bytes(),compresslevel=9,mtime=0))
+    wasm.unlink()
+assets=sorted(p.name for p in public.iterdir() if p.is_file() and not p.name.startswith('.') and p.name not in ['sw.js','game.html'])
+version=hashlib.sha256(Path(__file__).read_bytes()+b''.join((public/name).read_bytes() for name in assets)).hexdigest()[:12]
+sw='''const CACHE='melody-grove-VERSION';
+const FILES=ASSETS;
 self.addEventListener('install',event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
   let done=0;
@@ -34,3 +49,6 @@ self.addEventListener('message',event=>{
     event.ports[0]?.postMessage({ready:found.every(Boolean)});
   })());
 });
+'''.replace('VERSION',version).replace('ASSETS',json.dumps(['./'+name for name in assets]))
+(public/'sw.js').write_text(sw)
+print(f'Website ready: {len(assets)} offline files, {sum((public/n).stat().st_size for n in assets)/1e6:.1f} MB; version {version}')

@@ -1,0 +1,5 @@
+.DS_Store
+**/.godot/
+game-source/export_presets.cfg
+docs/game.html
+docs/game.wasm
