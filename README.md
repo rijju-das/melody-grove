@@ -10,11 +10,34 @@ https://rijju-das.github.io/melody-grove/
 
 Touch controls work in portrait and landscape. On a computer, use arrow keys or
 WASD to hop, Space to hear a note, Enter to choose it, L to hear the melody, R to
-retry the stage, and P to pause. Singing is optional; no microphone is recorded.
+retry the stage, P to pause, and C to switch between follow and wide views. Singing is optional; no microphone is recorded.
+
+The camera smoothly follows the player between platforms and pulls back during
+melody demonstrations. Use **Wide view** for a view of the whole forest. Golden
+gems spin above uncollected notes; each pickup flies to the top points counter
+with a **+10** reward. The gem count and points show the current stage attempt.
+Completed melodies also animate their points into the counter. Retrying resets
+the attempt counter while preserving saved best scores. The web interface
+respects the device’s reduced-motion preference for collection effects.
+
+## Stage celebrations and connected paths
+
+Completing a stage opens a gold-and-green success card with earned stars and a
+large Next stage button. An original 3.2-second victory jingle with synthesized
+applause plays once per attempt and respects the game volume (including mute).
+The sound is bundled with the game for offline play; it does not require a
+network voice service. The celebration text says which stage you completed.
+
+Next stage opens two trees and walks the character along the remaining note
+platforms and a wooden footbridge into the next forest section. The follow
+camera travels with the player; pause also pauses the crossing. The sections
+reuse the Blender forest meshes, with only the current section rendered after
+arrival to limit load. Choosing a stage from the menu starts directly in that
+section. After stage three, the success card returns to the journey menu.
 
 ## Stages and points
 
-1. **Find the notes:** collect all eight golden notes. Each different note earns
+1. **Find the notes:** collect all eight golden gems. Each different note earns
    10 points once. All eight unlock stage 2 and award three stars.
 2. **Echo meadow:** hear and reproduce three melodies of three notes each.
 3. **Canopy concert:** reproduce three melodies of four notes each.
@@ -50,6 +73,10 @@ session. Physical phone testing remains necessary.
 - `docs/`: ready-to-host web export, touch interface and offline support.
 - `tools/package_web.py`: compresses a fresh export and versions the offline cache.
 - `game-source/test_lessons.gd`: deterministic scoring/progression tests.
+- `game-source/test_follow_camera.gd`: scene-level camera, pickup and reset checks.
+- `game-source/test_success_path.gd`: celebrations, volume and connected-stage checks.
+- `tools/make_success_sound.py`: generates the original bundled victory sound.
+- `tools/test_rewards.cjs`: web collection effects, resets and phone layouts.
 - `tools/test_journey.cjs`: browser play-through; adjust Playwright/runtime paths
   for your environment before running it.
 

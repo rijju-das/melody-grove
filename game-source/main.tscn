@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://c4r4kc3khuli0" path="res://melody_grove.glb" id="1_ig7tw"]
 [ext_resource type="Script" path="res://grove_view.gd" id="2_view"]
 [ext_resource type="Script" path="res://melody_controller.gd" id="3_game"]
+[ext_resource type="Script" path="res://follow_camera.gd" id="4_camera"]
 
 [sub_resource type="Environment" id="Environment_grove"]
 background_mode = 1
@@ -21,6 +22,7 @@ script = ExtResource("2_view")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8052565, 1.1920929e-07, -0.12763524)
 
 [node name="GameCamera" type="Camera3D" parent="."]
+script = ExtResource("4_camera")
 position = Vector3(-1.8052565, 25, 25.872365)
 rotation = Vector3(-0.657394, 0, 0)
 projection = 1

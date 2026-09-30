@@ -26,6 +26,59 @@ $('sound-check').onclick = async () => {
 };
 const PROGRESS_KEY='melody-grove-progress-v1';
 let completedShown=false, activeLesson=null, pendingStage=1;
+let completionTimer, rewardFrame, rewardAttempt=null, lastReward=0, displayedPoints=0;
+const rewardAnimations=new Set();
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+function clearRewards() {
+  cancelAnimationFrame(rewardFrame);
+  clearTimeout(completionTimer);
+  rewardAnimations.forEach(animation=>animation.cancel());rewardAnimations.clear();
+  $('reward-effects').replaceChildren();$('reward-plus').textContent='';
+}
+function animateReward(reward, score) {
+  const reduced=reducedMotion.matches;
+  const wallet=$('points-wallet'), bounds=$('canvas').getBoundingClientRect(), target=wallet.getBoundingClientRect();
+  $('reward-plus').textContent=`+${reward.amount}`;
+  $('reward-announcement').textContent=`Plus ${reward.amount} points. ${score} points this stage.`;
+  const run=(element,frames,options,cleanup=()=>{})=>{
+    const animation=element.animate(frames,options);rewardAnimations.add(animation);
+    animation.finished.then(cleanup).catch(()=>{}).finally(()=>rewardAnimations.delete(animation));
+  };
+  if(!reduced) {
+    const spark=document.createElement('span');spark.className='flying-gem';
+    const gem=document.createElement('span');gem.className='gem-icon';
+    const label=document.createElement('b');label.textContent=`+${reward.amount}`;
+    spark.append(gem,label);$('reward-effects').append(spark);
+    const x=bounds.left+bounds.width*reward.from[0], y=bounds.top+bounds.height*reward.from[1];
+    const endX=target.left+target.width/2, endY=target.top+target.height/2;
+    spark.style.left=`${x}px`;spark.style.top=`${y}px`;
+    run(spark,[{transform:'translate(-50%,-50%) scale(.7)',opacity:0},{transform:'translate(-50%,calc(-50% - 24px)) scale(1.15)',opacity:1,offset:.24},{transform:`translate(calc(-50% + ${endX-x}px),calc(-50% + ${endY-y}px)) scale(.5)`,opacity:1,offset:.86},{transform:`translate(calc(-50% + ${endX-x}px),calc(-50% + ${endY-y}px)) scale(.2)`,opacity:0}],{duration:760,easing:'cubic-bezier(.3,.1,.6,1)'},()=>spark.remove());
+  }
+  run(wallet,reduced?[{opacity:.7},{opacity:1}]:[{transform:'scale(1)'},{transform:'scale(1.10)'},{transform:'scale(1)'}],{duration:320,delay:reduced?0:560});
+  run($('reward-plus'),[{opacity:1},{opacity:1,offset:.7},{opacity:0}],{duration:1100});
+  cancelAnimationFrame(rewardFrame);
+  const start=displayedPoints, started=performance.now(), delay=reduced?0:500;
+  const count=now=>{
+    const t=reduced?1:Math.max(0,Math.min(1,(now-started-delay)/260));
+    displayedPoints=Math.round(start+(score-start)*t);$('points-count').textContent=displayedPoints;
+    if(t<1)rewardFrame=requestAnimationFrame(count);
+  };
+  rewardFrame=requestAnimationFrame(count);
+}
+function updateRewards(state) {
+  const lesson=state.lesson;
+  if(rewardAttempt!==state.attempt) {
+    clearRewards();rewardAttempt=state.attempt;lastReward=state.reward?.id||0;
+    displayedPoints=lesson.score;$('points-count').textContent=lesson.score;
+    completedShown=false;
+  }
+  $('gem-count').textContent=lesson.stage===1?`${lesson.collected} / 8`:`${lesson.phase==='complete'?3:lesson.round-1} / 3`;
+  $('gem-label').textContent=lesson.stage===1?'GEMS':'MELODIES';
+  if(state.reward?.id>lastReward) {lastReward=state.reward.id;animateReward(state.reward,lesson.score);}
+  $('camera-mode').textContent=state.overview?'Follow view':'Wide view';
+  $('camera-mode').setAttribute('aria-pressed',String(!!state.overview));
+  $('view-label').textContent=state.camera_wide?(lesson.phase==='listening'?'LISTEN & WATCH':'FOREST VIEW'):'FOLLOWING YOU';
+}
 let memoryProgress=null;
 function readProgress() {
   if(memoryProgress) return memoryProgress;
@@ -133,47 +186,100 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
   if (event.data.type==='CACHE_PROGRESS') $('offline-detail').textContent=`Saving file ${event.data.done} of ${event.data.total}… Keep this page open.`;
 });
 
+const memoryLabels=['Low Do · C4','Re · D4','Mi · E4','Fa · F4','Sol · G4','La · A4','Ti · B4','High Do · C5'];
+const memoryButtons=memoryLabels.map((label,index)=>{
+  const button=document.createElement('button');button.dataset.note=index;
+  button.setAttribute('aria-label',`Jump to ${label} (key ${index+1})`);
+  button.onclick=()=>command('note',index);
+  $('memory-targets').append(button);return button;
+});
+let memoryInputBlocked=true;
+window.addEventListener('keydown',event=>{
+  if($('game-screen').hidden||activeLesson?.stage!==2||!/^Digit[1-8]$/.test(event.code)||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
+  event.preventDefault();
+  if(!event.repeat&&!memoryInputBlocked)command('note',Number(event.code.slice(-1))-1);
+});
+function updateMemory(state) {
+  const memory=state.lesson.stage===2;
+  $('game-screen').classList.toggle('memory-game',memory);
+  document.querySelector('.step-buttons').hidden=memory;
+  $('memory-markers').hidden=!memory;
+  $('camera-mode').hidden=memory;
+  $('memory-targets').hidden=!memory||state.transitioning;
+  memoryInputBlocked=!memory||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase!=='answer';
+  memoryButtons.forEach((button,i)=>{
+    button.disabled=memoryInputBlocked;
+    const point=state.targets?.[i];
+    if(point){button.style.left=`${point[0]*100}%`;button.style.top=`${point[1]*100}%`;button.style.width=`${point[2]*100}%`;}
+  });
+  $('memory-markers').setAttribute('aria-label',`${state.memory_marks||0} of 3 notes correct`);
+  [...$('memory-markers').children].forEach((marker,i)=>{marker.classList.toggle('filled',i<(state.memory_marks||0));marker.textContent=i<(state.memory_marks||0)?'✓':i+1;});
+  document.querySelector('.keyboard').textContent=memory?'Click a platform or press 1–8 to jump · L: listen again':'Arrows / WASD: hop · Enter: choose · L: listen · Space: hear note · C: camera';
+  if(memory)$('view-label').textContent=state.lesson.phase==='listening'?'WATCH THE GLOW':'MUSICAL MEMORY';
+}
+
 window.groveState = state => {
   paused=state.paused;
   $('note-status').textContent=state.text.replace(' · Space to repeat','').replace('Paused · press P or click Resume','Paused · tap Resume to continue').replace('Free play · use the arrow keys to continue','Hop onto a step, listen, then sing along').replace('At the start · press Up, Right, W or D','At the start · tap Next to hear Do');
   $('pause').textContent=paused?'Resume':'Pause';
-  $('step-count').textContent=state.step?`NOTE ${state.step} / 8`:'START';
+  $('step-count').textContent=state.step?`NOTE ${state.step} / 8`:(state.lesson?.stage===2?'CENTRE':'START');
   if (!state.lesson) return;
   const lesson=state.lesson;activeLesson=lesson;
+  updateRewards(state);
+  updateMemory(state);
+  $('path-transition').hidden=!state.transitioning;
+  $('path-destination').textContent=state.transitioning?`Entering ${['','Echo meadow','Canopy concert'][lesson.stage]}…`:'';
   $('lesson-title').textContent=`0${lesson.stage} · ${lesson.title}`;
   $('stage-score').textContent=`${lesson.score} pts`;
-  $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 golden notes collected · 80 points to unlock stage 2` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
+  $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 gems collected · 80 points to unlock stage 2` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
   $('lesson-progress').max=lesson.stage===1?8:3;
   $('lesson-progress').value=lesson.stage===1?lesson.collected:(lesson.phase==='complete'?3:lesson.round-1);
   $('note-action').dataset.command=lesson.stage===1?'repeat':'choose';
   $('note-action').textContent=lesson.stage===1?'♪ Play note':'✓ Choose note';
   $('listen').hidden=lesson.stage===1;
   $('listen').textContent=lesson.phase==='listening'?'Listening…':(lesson.phase==='answer'?'♪ Hear melody again':'♪ Listen to melody');
-  const locked=state.paused||lesson.phase==='listening'||lesson.phase==='complete';
+  const locked=state.paused||state.transitioning||lesson.phase==='listening'||lesson.phase==='complete';
   ['back','next'].forEach(name=>document.querySelector(`[data-command="${name}"]`).disabled=locked);
   $('note-action').disabled=locked||state.hopping||state.step===0||(lesson.stage>1&&lesson.phase!=='answer');
-  $('listen').disabled=locked||state.hopping;
-  $('pause').disabled=lesson.phase==='complete';
-  if(lesson.phase==='complete'&&!completedShown) {
+  $('listen').disabled=locked||state.hopping||state.recovering;
+  $('pause').disabled=lesson.phase==='complete'&&!state.transitioning;
+  $('camera-mode').disabled=!!state.transitioning;
+  document.querySelector('[data-command="restart"]').disabled=!!state.transitioning;
+  if(lesson.phase==='complete'&&!completedShown&&!state.transitioning) {
     completedShown=true;
     $('complete-eyebrow').textContent=lesson.stage===3?'JOURNEY COMPLETE':'STAGE COMPLETE';
     $('earned-stars').textContent='★ '.repeat(lesson.stars)+'☆ '.repeat(3-lesson.stars);
     $('earned-stars').setAttribute('aria-label',`${lesson.stars} of 3 stars`);
-    $('complete-title').textContent=['You found your first octave!','Your musical memory is growing!','The canopy is yours!'][lesson.stage-1];
-    $('complete-summary').textContent=`${lesson.score} points · ${lesson.stage===1?'8 notes collected':lesson.mistakes+' mistakes'}. ${lesson.stage<3?'Your next stage is unlocked.':'Replay any stage to improve your stars.'}`;
+    $('complete-title').textContent=lesson.stage===3?'You did it!':'Hurray!';
+    $('complete-message').textContent=`Well done! You crossed stage ${['one','two','three'][lesson.stage-1]}.`;
+    $('complete-summary').textContent=`${lesson.score} points earned · ${lesson.stage===1?'8 gems collected':lesson.stars+' stars earned'}`;
+    $('next-stage-hint').textContent=lesson.stage<3?`Stage ${lesson.stage+1} unlocked · ${['','Echo meadow','Canopy concert'][lesson.stage]}`:'The whole grove is yours. Keep singing!';
     $('save-result').textContent=state.saved?'Best score and stage unlock saved on this device.':'Your browser could not save progress. Keep this tab open to continue.';
-    $('continue-stage').textContent=lesson.stage<3?'Next stage →':'Back to your journey';
-    $('complete-dialog').showModal();
-  } else if(lesson.phase!=='complete') {completedShown=false;if($('complete-dialog').open)$('complete-dialog').close();}
+    $('continue-stage').textContent=lesson.stage<3?`Next stage ${lesson.stage+1} →`:'Back to your journey →';
+    // Let the last gem reach the wallet before opening the stage result.
+    completionTimer=setTimeout(()=>{
+      if(activeLesson.phase!=='complete'||$('game-screen').hidden)return;
+      const confetti=$('complete-dialog').querySelector('.success-confetti');
+      confetti.replaceChildren();
+      if(!reducedMotion.matches) for(let i=0;i<22;i++) {
+        const piece=document.createElement('i');
+        piece.style.cssText=`--x:${(i*37)%100}%;--delay:${(i%6)*.07}s;--turn:${i*53}deg;--colour:${['#ffda72','#90cc78','#f2a084','#fff6bc'][i%4]}`;
+        confetti.append(piece);
+      }
+      $('complete-dialog').showModal();
+      $('continue-stage').focus({preventScroll:true});
+      command('celebrate');
+    },reducedMotion.matches?0:950);
+  } else if(lesson.phase!=='complete') {completedShown=false;clearTimeout(completionTimer);if($('complete-dialog').open)$('complete-dialog').close();}
 };
 function command(name,value) {if (typeof window.groveCommand==='function') window.groveCommand(name,value);}
 document.querySelectorAll('[data-command]').forEach(button=>button.onclick=()=>command(button.dataset.command));
 $('volume').oninput=event=>command('volume',Number(event.target.value));
-function home() {if(gameStarted&&!paused)command('pause');$('complete-dialog').close();$('game-screen').hidden=true;$('welcome').hidden=false;updateStageMenu();window.scrollTo(0,0);}
+function home() {if(gameStarted&&!paused)command('pause');command('stop_celebration');clearRewards();$('complete-dialog').close();$('game-screen').hidden=true;$('welcome').hidden=false;updateStageMenu();window.scrollTo(0,0);}
 $('home').onclick=home;
 $('journey-home').onclick=home;
 $('complete-dialog').addEventListener('cancel',event=>event.preventDefault());
-$('continue-stage').onclick=()=>{if(activeLesson.stage<3){$('complete-dialog').close();command('stage',activeLesson.stage+1);}else home();};
+$('continue-stage').onclick=()=>{if(activeLesson.stage<3){$('complete-dialog').close();command('advance');}else home();};
 $('replay-stage').onclick=()=>{$('complete-dialog').close();command('stage',activeLesson.stage);};
 $('fullscreen').onclick=async()=>{
   try {if (document.fullscreenElement) await document.exitFullscreen();else if ($('game-screen').requestFullscreen) await $('game-screen').requestFullscreen();else {$('fullscreen').textContent='Turn phone sideways';}}
@@ -201,5 +307,5 @@ async function play(stageNumber=pendingStage) {
   finally {starting=false;}
 }
 $('play').onclick=()=>play(pendingStage);$('retry').onclick=()=>{location.reload();};
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameStarted&&!paused) command('pause');});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameStarted){command('stop_celebration');if(!paused)command('pause');}});
 saveOffline();
