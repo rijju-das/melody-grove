@@ -21,7 +21,13 @@ const fs=require('node:fs');
  };
  const listen=async()=>{await page.locator('#listen').tap();await wait(()=>window.testState?.lesson.phase==='answer');};
  const answer=async(notes)=>{
-   for(const note of notes){await move(note+1);const before=(await state()).lesson;await page.locator('#note-action').tap();await wait(old=>{const l=window.testState.lesson;return l.answer!==old.answer||l.round!==old.round||l.phase!==old.phase||l.mistakes!==old.mistakes;},before);}
+   for(const note of notes){
+     const memory=(await state()).lesson.stage===2;
+     if(!memory)await move(note+1);
+     const before=(await state()).lesson;
+     if(memory)await page.locator(`[data-note="${note}"]`).tap();else await page.locator('#note-action').tap();
+     await wait(old=>{const l=window.testState.lesson;return l.answer!==old.answer||l.round!==old.round||l.phase!==old.phase||l.mistakes!==old.mistakes;},before);
+   }
  };
  try {
    await page.goto('http://127.0.0.1:4321/');
@@ -65,7 +71,7 @@ const fs=require('node:fs');
    await wait(()=>window.testState.lesson.stage===2&&!window.testState.transitioning);
    await snap('success-new-forest');
    if(process.argv.includes('--passage-only')) {console.log('PASS: victory card, audio, responsive next-stage button and tree passage');return;}
-   await listen();await move(2);await page.locator('#note-action').tap();await wait(()=>window.testState.lesson.mistakes===1);
+   await listen();await page.locator('[data-note="1"]').tap();await wait(()=>window.testState.lesson.mistakes===1);await wait(()=>window.testState.step===0&&!window.testState.hopping&&!window.testState.recovering);
    await answer([0,2,4]);await listen();await answer([4,2,0]);await listen();await answer([0,1,2]);
    await page.locator('#complete-dialog').waitFor({state:'visible'});
    const second=(await state()).lesson;
@@ -88,7 +94,7 @@ const fs=require('node:fs');
    if(await page.locator('[data-stage="3"]').isDisabled())throw Error('Unlock not persisted');
    await page.locator('[data-stage="2"]').tap();await wait(()=>window.testState?.lesson.stage===2);
    await page.locator('#loading').waitFor({state:'hidden'});
-   await listen();await move(1);await page.locator('#note-action').tap();await wait(()=>window.testState.lesson.answer===1);
+   await listen();await answer([0]);await wait(()=>window.testState.lesson.answer===1);
    if((await state()).lesson.total!==345)throw Error('Replay erased best scores');
    console.log('PASS: offline restart, persisted scores, selected stage and sound');
    if(errors.length)throw Error(JSON.stringify(errors));

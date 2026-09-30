@@ -8,16 +8,20 @@ var rings: Array[MeshInstance3D] = []
 var pulses: Array[float] = []
 var center := Vector3.ZERO
 var exit_point := Vector3.ZERO
+var exit_waypoint := Vector3.ZERO
 var wobble_note := -1
 var wobble_time := 0.0
 
 func setup(section: Node3D) -> void:
 	center = section.global_position + Vector3(0, 1.1, 0)
+	exit_waypoint = center + Vector3(6.6, 0, 2.3)
 	exit_point = section.find_child("MS_Pad_7", true, false).global_position + Vector3(0, 0.135, 0)
 	var entry: Vector3 = section.find_child("Grove_starting surface", true, false).global_position + Vector3(0, 0.135, 0)
 	for child in section.find_children("*", "Node3D", true, false):
 		var title := str(child.name)
 		if title.begins_with("MS_Pad") or title.begins_with("MS_Note") or title.begins_with("MS_Letter") or title.begins_with("Grove_connected musical branch") or title.begins_with("Grove_branch highlight") or title.begins_with("Grove_branch leaf") or title.begins_with("Grove_wooden halo") or title.begins_with("Grove_cut wood grain"):
+			child.hide()
+		if title.begins_with("Grove_leaf twig") or title.begins_with("Grove_node leaf") or title.begins_with("Grove_node root support") or title in ["MS_Title", "MS_Subtitle"]:
 			child.hide()
 	global_position = center
 	_disc(self, 6.9, 0.35, -0.75, "729b58")
@@ -32,7 +36,7 @@ func setup(section: Node3D) -> void:
 		_disc(pad, 1.0, 0.42, -0.25, "b58346")
 		_disc(pad, 1.03, 0.10, -0.04, "f6dc8c")
 		tops.append(_disc(pad, 0.92, 0.08, 0.03, COLORS[i]))
-		_label(pad, LABELS[i], Vector3(0, 0.18, 0.25), 36)
+		_label(pad, LABELS[i], Vector3(0, 0.50, 0.25), 32)
 		var ring := MeshInstance3D.new()
 		var mesh := TorusMesh.new()
 		mesh.inner_radius = 1.06
@@ -48,7 +52,8 @@ func setup(section: Node3D) -> void:
 		pads.append(pad)
 		pulses.append(0.0)
 	_path(entry, center)
-	_path(center, exit_point)
+	_path(center, exit_waypoint)
+	_path(exit_waypoint, exit_point)
 	var exit_stump := Node3D.new()
 	add_child(exit_stump)
 	exit_stump.global_position = exit_point
@@ -84,13 +89,14 @@ func _label(parent: Node3D, text: String, at: Vector3, font_size: int) -> void:
 	label.outline_modulate = Color("fff4cf")
 	label.outline_size = 5
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
 	parent.add_child(label)
 	label.position = at
 
 func _path(from: Vector3, to: Vector3) -> void:
 	var length := from.distance_to(to)
 	var plank := BoxMesh.new()
-	plank.size = Vector3(1.7, 0.16, 0.48)
+	plank.size = Vector3(1.2, 0.16, 0.48)
 	var material := _material("ba9259")
 	var count := ceili(length / 0.5)
 	for i in range(count + 1):

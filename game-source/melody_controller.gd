@@ -67,6 +67,7 @@ var native_markers: Label
 var native_step_row: HBoxContainer
 var native_choose_button: Button
 var native_hint: Label
+var native_panel: PanelContainer
 
 func _ready() -> void:
 	_bind_keys()
@@ -353,7 +354,7 @@ func repeat_note() -> void:
 	if paused or hopping or lesson.phase in ["listening", "complete"]:
 		return
 	if route_index == 0:
-		status.text = "Hop onto the first step to hear Do."
+		status.text = "Tap Listen to watch the melody." if lesson.stage == 2 else "Hop onto the first step to hear Do."
 	else:
 		_play_note(route_index - 1)
 
@@ -386,7 +387,9 @@ func _play_note(index: int) -> void:
 	halo.global_position = pads[index].global_position + Vector3.UP * 0.16
 	halo.show()
 	status.text = "%s · listen, then sing it back" % NOTE_NAMES[index] if lesson.stage == 1 else "%s · Choose note to answer" % NOTE_NAMES[index]
-	if lesson.stage == 2: memory_arena.light_note(index)
+	if lesson.stage == 2:
+		status.text = "Listen: %s" % NOTE_NAMES[index] if lesson.phase == "listening" else NOTE_NAMES[index]
+		memory_arena.light_note(index)
 	note_played.emit(index)
 
 func start_stage(number: int, arriving := false) -> void:
@@ -414,6 +417,7 @@ func start_stage(number: int, arriving := false) -> void:
 	reset_player()
 	if not arriving: camera.reset_follow()
 	if camera_button: camera_button.text = "Wide view · C"
+	if camera_button: camera_button.visible = number != 2
 	demo_index = 0
 	demo_elapsed = 0
 	for orb in collectibles: orb.visible = number == 1
@@ -435,6 +439,7 @@ func advance_stage() -> void:
 	# Finish walking the current branch before crossing the connecting bridge.
 	if lesson.stage == 2:
 		travel_points.append(memory_arena.center)
+		travel_points.append(memory_arena.exit_waypoint)
 		travel_points.append(memory_arena.exit_point)
 	else:
 		for i in range(route_index + 1, route.size()): travel_points.append(route[i])
@@ -555,6 +560,7 @@ func _save_progress() -> void:
 
 func _update_lesson_hud() -> void:
 	if native_markers:
+		native_panel.offset_top = -265 if lesson.stage == 2 else -230
 		native_markers.visible = lesson.stage == 2
 		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat(3 - memory_marks)
 		native_step_row.visible = lesson.stage != 2
@@ -593,6 +599,7 @@ func _make_collectibles() -> void:
 		collectibles.append(orb)
 
 func toggle_camera() -> void:
+	if lesson.stage == 2: return
 	camera.overview = not camera.overview
 	if camera_button: camera_button.text = "Follow view · C" if camera.overview else "Wide view · C"
 
@@ -686,6 +693,7 @@ func _make_hud() -> void:
 	reward_effects.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(reward_effects)
 	var panel := PanelContainer.new()
+	native_panel = panel
 	layer.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 22

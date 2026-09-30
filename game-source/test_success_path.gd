@@ -62,7 +62,7 @@ func run() -> void:
 	game.route_index = 3
 	game.player.global_position = game.route[3]
 	game.advance_stage()
-	check(game.travel_points.size() == 6, "Walk follows remaining platforms before second bridge")
+	check(game.travel_points.size() == 4, "Walk goes around the note platforms before the second bridge")
 	for frame in range(900):
 		if not game.transitioning: break
 		game._process(1.0 / 60.0)

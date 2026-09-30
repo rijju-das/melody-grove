@@ -1,0 +1,69 @@
+const {chromium}=require('/Users/rijju/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+  const browser=await chromium.launch({channel:'chrome',headless:true});
+  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
+  const wait=(fn,arg)=>page.waitForFunction(fn,arg,{timeout:20000});
+  const snap=name=>page.screenshot({path:`/Users/rijju/Documents/Blender_2026/godot-diagnostics/memory-${name}.png`,fullPage:true});
+  const listen=async()=>{await page.locator('#listen').tap();await wait(()=>window.testState.lesson.phase==='answer');};
+  const jump=async(note,key=false)=>{
+    const before=await page.evaluate(()=>window.testState.lesson);
+    if(key)await page.keyboard.press(String(note+1));else await page.locator(`[data-note="${note}"]`).tap();
+    await wait(old=>{const l=window.testState.lesson;return l.answer!==old.answer||l.round!==old.round||l.phase!==old.phase||l.mistakes!==old.mistakes;},before);
+  };
+  try {
+    await page.goto('http://127.0.0.1:4321/');
+    await page.evaluate(()=>localStorage.setItem('melody-grove-progress-v1',JSON.stringify({version:1,records:[{complete:true,score:80,stars:3},{complete:false,score:0,stars:0},{complete:false,score:0,stars:0}]})));
+    await page.reload();
+    await page.evaluate(()=>{const report=window.groveState;window.groveState=s=>{window.testState=s;report(s);};});
+    await page.locator('[data-stage="2"]').tap();
+    await page.locator('#loading').waitFor({state:'hidden',timeout:60000});
+    await wait(()=>window.testState?.lesson.stage===2);
+    await page.waitForTimeout(700);
+    assert.equal(await page.locator('#memory-targets button').count(),8);
+    assert(await page.locator('#note-action').isHidden());
+    assert(await page.locator('#memory-targets button').first().isDisabled());
+    const targets=await page.locator('#memory-targets button').evaluateAll(buttons=>buttons.map(button=>{const r=button.getBoundingClientRect(),c=document.getElementById('canvas').getBoundingClientRect();return r.width>=44&&r.left>=c.left&&r.right<=c.right&&r.top>=c.top&&r.bottom<=c.bottom;}));
+    assert(targets.every(Boolean),'All phone targets fit and are at least 44px');
+    await snap('ready-phone');
+    await page.locator('#listen').tap();await wait(()=>window.testState.lesson.phase==='listening');
+    await page.waitForTimeout(250);await snap('glow-phone');
+    await wait(()=>window.testState.lesson.phase==='answer');
+    if(process.argv.includes('--layout-only')) {
+      await page.setViewportSize({width:844,height:390});
+      await page.waitForTimeout(700);await snap('landscape');
+      assert.deepEqual(errors,[]);
+      console.log('PASS: final phone/landscape layout, eight targets and glowing playback');
+      return;
+    }
+    await jump(0,true);
+    assert.equal(await page.locator('#memory-markers .filled').count(),1);
+    // Current-platform jump submits one answer and gives gentle recovery.
+    await page.keyboard.press('1');await wait(()=>window.testState.hopping);
+    await snap('same-note-jump');
+    await wait(()=>window.testState.lesson.mistakes===1);
+    await wait(()=>window.testState.step===0&&!window.testState.hopping&&!window.testState.recovering);
+    assert.equal(await page.locator('#memory-markers .filled').count(),0);
+    await listen();
+    await jump(0);await jump(2,true);await snap('two-correct');await jump(4);
+    await wait(()=>window.testState.step===0&&!window.testState.hopping&&!window.testState.recovering);
+    assert.equal(await page.evaluate(()=>window.testState.lesson.score),30);
+    assert.equal(await page.locator('#memory-markers .filled').count(),3);
+    await page.setViewportSize({width:844,height:390});await page.waitForTimeout(700);await snap('landscape');
+    await listen();await jump(4);await jump(2);await jump(0);
+    await listen();await jump(0);await jump(1);await jump(2);
+    await page.locator('#complete-dialog').waitFor({state:'visible'});
+    assert.equal(await page.evaluate(()=>window.testState.lesson.score),115);
+    assert.equal(await page.evaluate(()=>window.testState.lesson.unlocked),3);
+    await page.locator('#continue-stage').tap();await wait(()=>window.testState.transitioning);
+    await wait(()=>window.testState.lesson.stage===3&&!window.testState.transitioning);
+    assert(await page.locator('#memory-targets').isHidden());
+    assert(await page.locator('#note-action').isVisible());
+    assert.deepEqual(errors,[]);
+    console.log('PASS: eight phone targets, glowing playback, clicks and keyboard, same-note jump, markers, recovery, 115 points, landscape and path into stage 3');
+  } catch(error){await snap('error');console.log(await page.evaluate(()=>window.testState));throw error;}
+  finally {await browser.close();}
+})().catch(error=>{console.error(error);process.exit(1);});

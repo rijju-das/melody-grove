@@ -12,6 +12,9 @@ Touch controls work in portrait and landscape. On a computer, use arrow keys or
 WASD to hop, Space to hear a note, Enter to choose it, L to hear the melody, R to
 retry the stage, P to pause, and C to switch between follow and wide views. Singing is optional; no microphone is recorded.
 
+In stage 2, click/tap any note platform or press **1–8** to jump directly to it.
+Landing chooses that note automatically. The camera keeps the whole circle in view.
+
 The camera smoothly follows the player between platforms and pulls back during
 melody demonstrations. Use **Wide view** for a view of the whole forest. Golden
 gems spin above uncollected notes; each pickup flies to the top points counter
@@ -39,12 +42,21 @@ section. After stage three, the success card returns to the journey menu.
 
 1. **Find the notes:** collect all eight golden gems. Each different note earns
    10 points once. All eight unlock stage 2 and award three stars.
-2. **Echo meadow:** hear and reproduce three melodies of three notes each.
+2. **Echo meadow:** start in the centre of eight circular note platforms. Listen
+   to three melodies of three notes each, watch their platforms glow, and jump
+   to repeat each sequence. Low Do (C4) and high Do (C5) are labelled separately.
 3. **Canopy concert:** reproduce three melodies of four notes each.
 
-For melody stages, tap Listen, move to the first note and tap Choose note.
-Repeat for each note in the sequence. Movement previews notes without submitting
-an answer. A wrong choice resets the current sequence; previously completed
+In stage 2, tap **Listen**, then jump to the notes in order. You can jump from any
+platform to any other, including jumping in place to repeat the same note.
+Three markers show your progress. A wrong note gives a gentle wobble and returns
+you to the centre; only the current sequence resets. Completed melodies and
+their points remain. Listen again is free and returns you to the centre before
+replaying. Finish a melody to earn 30 points, then listen to the next one.
+
+In stage 3, tap Listen, move to the first note and tap Choose note. Repeat for
+each note in the sequence. Movement previews notes without submitting an
+answer. A wrong choice resets the current sequence; previously completed
 melodies remain complete. Listen again as often as needed, without a penalty.
 
 Each completed melody earns 10 points per note. The stage bonus is 30 points,
@@ -75,6 +87,9 @@ session. Physical phone testing remains necessary.
 - `game-source/test_lessons.gd`: deterministic scoring/progression tests.
 - `game-source/test_follow_camera.gd`: scene-level camera, pickup and reset checks.
 - `game-source/test_success_path.gd`: celebrations, volume and connected-stage checks.
+- `game-source/memory_arena.gd`: circular stage 2 platforms, labels, glow and paths.
+- `game-source/test_memory_arena.gd`: direct jumps, playback, recovery and scoring.
+- `tools/test_memory_arena.cjs`: phone targets, keyboard/touch, markers and stage 2 journey.
 - `tools/make_success_sound.py`: generates the original bundled victory sound.
 - `tools/test_rewards.cjs`: web collection effects, resets and phone layouts.
 - `tools/test_journey.cjs`: browser play-through; adjust Playwright/runtime paths
