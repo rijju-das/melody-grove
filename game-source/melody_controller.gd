@@ -60,6 +60,11 @@ var travel_position := Vector3.ZERO
 var travel_time := 0.0
 var next_stage := 1
 var memory_arena: Node3D
+var canopy: Node3D
+var canopy_index := 0
+var concert_moving := false
+var concert_hint := false
+var native_hint_button: Button
 var memory_marks := 0
 var memory_return_delay := 0.0
 var memory_return_text := ""
@@ -103,6 +108,9 @@ func _ready() -> void:
 	memory_arena = preload("res://memory_arena.gd").new()
 	stage_path.sections[1].add_child(memory_arena)
 	memory_arena.setup(stage_path.sections[1])
+	canopy = preload("res://canopy_concert.gd").new()
+	stage_path.sections[2].add_child(canopy)
+	canopy.setup(stage_path.sections[2], stage_path.entry(3))
 	audio = AudioStreamPlayer.new()
 	audio.name = "NoteAudio"
 	audio.volume_db = -8.0
@@ -133,6 +141,7 @@ func _web_command(arguments: Array) -> void:
 		"repeat": repeat_note()
 		"choose": choose_note()
 		"listen": listen_melody()
+		"hint": listen_melody(true)
 		"note":
 			if arguments.size() > 1: request_note(int(arguments[1]))
 		"stage":
@@ -170,7 +179,7 @@ func _bind_keys() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo() or player == null:
 		return
-	if lesson.stage == 2 and event.physical_keycode >= KEY_1 and event.physical_keycode <= KEY_8:
+	if lesson.stage >= 2 and event.physical_keycode >= KEY_1 and event.physical_keycode <= KEY_8:
 		request_note(event.physical_keycode - KEY_1)
 	elif event.is_action_pressed("grove_restart"):
 		start_stage(lesson.stage)
@@ -194,28 +203,33 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if OS.has_feature("web") and status:
-		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok, "attempt": attempt_id, "reward": last_reward, "overview": camera.overview, "camera_wide": camera.is_overview(), "transitioning": transitioning, "memory_marks": memory_marks, "recovering": memory_return_delay > 0, "targets": _memory_targets(), "glade_target": _glade_target()})
+		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok, "attempt": attempt_id, "reward": last_reward, "overview": camera.overview, "camera_wide": camera.is_overview(), "transitioning": transitioning, "memory_marks": memory_marks, "recovering": memory_return_delay > 0, "targets": _memory_targets(), "glade_target": _glade_target(), "clearing": canopy_index + 1, "guided": concert_hint, "concert_moving": concert_moving})
 		if state != web_last_state:
 			web_last_state = state
 			JavaScriptBridge.eval("window.groveState && window.groveState(" + state + ")")
 	if native_glade:
-		native_glade.visible = lesson.stage == 2 and not transitioning and lesson.phase != "complete"
+		native_glade.visible = lesson.stage >= 2 and not transitioning and lesson.phase != "complete"
 		native_glade.disabled = paused or hopping or memory_return_delay > 0 or lesson.phase in ["listening", "complete"]
 		native_glade.text = "♪ Listening…" if lesson.phase == "listening" else ("Listen again\n↓" if lesson.phase == "answer" else "Tap to listen\n↓")
-		native_glade.position = camera.unproject_position(memory_arena.center) - Vector2(80, 95)
+		native_glade.position = camera.unproject_position(active_arena().center) - Vector2(80, 95)
+	if native_hint_button:
+		native_hint_button.visible = lesson.stage == 3
+		native_hint_button.disabled = paused or hopping or transitioning or memory_return_delay > 0 or lesson.phase not in ["ready", "answer"]
 	if player == null or paused:
 		return
 	if transitioning:
-		_walk_to_next_stage(delta)
+		if concert_moving: _walk_concert(delta)
+		else: _walk_to_next_stage(delta)
 		return
 	if lesson.stage == 2: memory_arena.tick(delta)
+	if lesson.stage == 3: canopy.tick(delta)
 	collectible_time += delta
 	for i in range(collectibles.size()):
 		if collectibles[i].visible:
 			collectibles[i].rotation.y += delta * 1.4
 			collectibles[i].global_position.y = pads[i].global_position.y + 1.15 + sin(collectible_time * 2.8 + i) * 0.13
 	if lesson.phase == "listening":
-		if lesson.stage == 2 and hopping:
+		if lesson.stage >= 2 and hopping:
 			_process_hop(delta)
 			return
 		demo_elapsed -= delta
@@ -224,23 +238,25 @@ func _process(delta: float) -> void:
 			if demo_index < melody.size():
 				_play_note(int(melody[demo_index]))
 				status.text = "Listen: %s (%d of %d)" % [NOTE_NAMES[melody[demo_index]], demo_index + 1, melody.size()]
+				if lesson.stage == 3 and not _reveal_demo_note():
+					status.text = "Listen carefully… %d of 4" % (demo_index + 1)
 				demo_index += 1
 				demo_elapsed = 1.05
 			else:
 				lesson.demo_finished()
 				halo.hide()
-				if lesson.stage == 2: memory_arena.clear_lights()
-				status.text = "Your turn! Tap the first platform, or press 1–8." if lesson.stage == 2 else "Your turn! Move to a note, then Choose note."
+				if lesson.stage >= 2: active_arena().clear_lights()
+				status.text = "Your turn! Tap the first platform, or press 1–8." if lesson.stage >= 2 else "Your turn! Move to a note, then Choose note."
 		return
 	if lesson.phase == "complete": return
 	cooldown = maxf(0, cooldown - delta)
-	if lesson.stage == 2 and memory_return_delay > 0:
+	if lesson.stage >= 2 and memory_return_delay > 0:
 		memory_return_delay = maxf(0, memory_return_delay - delta)
 		if memory_return_delay == 0: _start_note_hop(0)
 		return
 	if hopping:
 		_process_hop(delta)
-	elif cooldown <= 0 and lesson.stage != 2:
+	elif cooldown <= 0 and lesson.stage == 1:
 		var direction := queued_direction
 		queued_direction = 0
 		if direction == 0:
@@ -262,7 +278,7 @@ func _process_hop(delta: float) -> void:
 		hopping = false
 		cooldown = 0.16
 		_rest_limbs()
-		if lesson.stage == 2:
+		if lesson.stage >= 2:
 			if route_index > 0: choose_note(true)
 			else:
 				halo.hide()
@@ -280,7 +296,7 @@ func _process_hop(delta: float) -> void:
 		step_landed.emit(route_index)
 
 func request_step(direction: int) -> void:
-	if lesson.stage == 2 or paused or player == null or lesson.phase in ["listening", "complete"]:
+	if lesson.stage >= 2 or paused or player == null or lesson.phase in ["listening", "complete"]:
 		return
 	if hopping or cooldown > 0:
 		# Buffer one tap so quick presses feel responsive without a long queue.
@@ -299,8 +315,8 @@ func request_step(direction: int) -> void:
 	status.text = "Hopping to %s…" % NOTE_NAMES[target - 1] if target > 0 else "Returning to the starting stump…"
 
 func request_note(index: int) -> void:
-	if lesson.stage not in [1, 2] or paused or hopping or transitioning or memory_return_delay > 0 or index < 0 or index > 7: return
-	if lesson.phase == "complete" or (lesson.stage == 2 and lesson.phase != "answer"): return
+	if lesson.stage not in [1, 2, 3] or paused or hopping or transitioning or memory_return_delay > 0 or index < 0 or index > 7: return
+	if lesson.phase == "complete" or (lesson.stage >= 2 and lesson.phase != "answer"): return
 	_start_note_hop(index + 1)
 	status.text = "Jumping to %s…" % NOTE_NAMES[index]
 
@@ -314,15 +330,15 @@ func _start_note_hop(target: int) -> void:
 	if facing.length() > 0.01: player.rotation.y = atan2(facing.x, facing.z)
 
 func _glade_target() -> Array:
-	if lesson.stage != 2 or transitioning: return []
+	if lesson.stage < 2 or transitioning: return []
 	var viewport_size := get_viewport().get_visible_rect().size
-	var point := camera.unproject_position(memory_arena.center)
-	var edge := camera.unproject_position(memory_arena.center + camera.global_basis.x * 1.25)
+	var point := camera.unproject_position(active_arena().center)
+	var edge := camera.unproject_position(active_arena().center + camera.global_basis.x * 1.25)
 	return [snappedf(point.x / viewport_size.x, 0.0001), snappedf(point.y / viewport_size.y, 0.0001), snappedf(point.distance_to(edge) * 2.0 / viewport_size.x, 0.0001)]
 
 func _memory_targets() -> Array:
 	var targets: Array = []
-	if lesson.stage not in [1, 2] or transitioning: return targets
+	if lesson.stage not in [1, 2, 3] or transitioning: return targets
 	var viewport_size := get_viewport().get_visible_rect().size
 	for pad in pads:
 		var point := camera.unproject_position(pad.global_position)
@@ -331,14 +347,14 @@ func _memory_targets() -> Array:
 	return targets
 
 func _unhandled_input(event: InputEvent) -> void:
-	if OS.has_feature("web") or lesson.stage not in [1, 2]: return
+	if OS.has_feature("web") or lesson.stage not in [1, 2, 3]: return
 	var point: Vector2
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: point = event.position
 	elif event is InputEventScreenTouch and event.pressed: point = event.position
 	else: return
-	var centre_screen := camera.unproject_position(memory_arena.center)
-	var centre_radius := centre_screen.distance_to(camera.unproject_position(memory_arena.center + camera.global_basis.x * 1.25))
-	if lesson.stage == 2 and point.distance_to(centre_screen) <= centre_radius:
+	var centre_screen := camera.unproject_position(active_arena().center)
+	var centre_radius := centre_screen.distance_to(camera.unproject_position(active_arena().center + camera.global_basis.x * 1.25))
+	if lesson.stage >= 2 and point.distance_to(centre_screen) <= centre_radius:
 		listen_melody()
 		get_viewport().set_input_as_handled()
 		return
@@ -377,7 +393,7 @@ func repeat_note() -> void:
 	if paused or hopping or lesson.phase in ["listening", "complete"]:
 		return
 	if route_index == 0:
-		status.text = "Tap the Listening Glade to hear the melody." if lesson.stage == 2 else "Hop onto the first step to hear Do."
+		status.text = "Tap the Listening Glade to hear the melody." if lesson.stage >= 2 else "Hop onto the first step to hear Do."
 	else:
 		_play_note(route_index - 1)
 
@@ -404,27 +420,42 @@ func _rest_limbs() -> void:
 	for i in range(limbs.size()):
 		limbs[i].rotation = limb_rest[i]
 
+func active_arena() -> Node3D:
+	return canopy.arenas[canopy_index] if lesson.stage == 3 else memory_arena
+
+func _reveal_demo_note() -> bool:
+	return lesson.stage != 3 or lesson.phase != "listening" or concert_hint or canopy_index == 0 or (canopy_index == 1 and demo_index == 0)
+
 func _play_note(index: int) -> void:
 	audio.stream = sounds[index]
 	audio.play()
 	halo.global_position = pads[index].global_position + Vector3.UP * 0.16
 	halo.show()
 	status.text = "%s · listen, then sing it back" % NOTE_NAMES[index] if lesson.stage == 1 else "%s · Choose note to answer" % NOTE_NAMES[index]
-	if lesson.stage == 2:
-		status.text = "Listen: %s" % NOTE_NAMES[index] if lesson.phase == "listening" else NOTE_NAMES[index]
-		memory_arena.light_note(index)
+	if lesson.stage >= 2:
+		if _reveal_demo_note():
+			status.text = "Listen: %s" % NOTE_NAMES[index] if lesson.phase == "listening" else NOTE_NAMES[index]
+			active_arena().light_note(index)
+		else:
+			halo.hide()
+			active_arena().clear_lights()
+			status.text = "Listen carefully…"
 	note_played.emit(index)
 
 func start_stage(number: int, arriving := false) -> void:
 	if not lesson.begin(number): return
 	transitioning = false
+	concert_moving = false
+	concert_hint = false
+	canopy_index = 0
+	canopy.reset()
 	stage_path.show_stage(number)
 	pads.clear()
 	route.clear()
-	route.append(memory_arena.center if number == 2 else stage_path.entry(number))
+	route.append(active_arena().center if number >= 2 else stage_path.entry(number))
 	var section: Node3D = stage_path.sections[number - 1]
 	for i in range(8):
-		var pad := memory_arena.pads[i] as Node3D if number == 2 else section.find_child("MS_Pad_%d" % i, true, false) as Node3D
+		var pad := active_arena().pads[i] as Node3D if number >= 2 else section.find_child("MS_Pad_%d" % i, true, false) as Node3D
 		pads.append(pad)
 		route.append(pad.global_position + FOOT_OFFSET)
 		collectibles[i].global_position = pad.global_position + Vector3.UP * 1.15
@@ -440,12 +471,13 @@ func start_stage(number: int, arriving := false) -> void:
 	reset_player()
 	if not arriving: camera.reset_follow()
 	if camera_button: camera_button.text = "Wide view · C"
-	if camera_button: camera_button.visible = number != 2
+	if camera_button: camera_button.visible = number == 1
 	demo_index = 0
 	demo_elapsed = 0
 	for orb in collectibles: orb.visible = number == 1
 	status.text = "Tap a platform to jump and collect its gem · 10 points each" if number == 1 else "Tap Listen, remember the melody, then choose its notes."
 	if number == 2: status.text = "Tap the centre glade. Watch, then jump to repeat the melody."
+	if number == 3: status.text = _concert_prompt()
 	_update_lesson_hud()
 
 func advance_stage() -> void:
@@ -468,6 +500,9 @@ func advance_stage() -> void:
 		for i in range(route_index + 1, route.size()): travel_points.append(route[i])
 	travel_points.append(stage_path.entry(next_stage))
 	if next_stage == 2: travel_points.append(memory_arena.center)
+	if next_stage == 3:
+		travel_points.append(canopy.arenas[0].center + Vector3(-6.6, 0, 2.3))
+		travel_points.append(canopy.arenas[0].center)
 	travel_index = 0
 	travel_time = 0
 	travel_position = player.global_position
@@ -489,20 +524,67 @@ func _walk_to_next_stage(delta: float) -> void:
 		travel_index += 1
 		if travel_index >= travel_points.size(): start_stage(next_stage, true)
 
-func listen_melody() -> void:
+func _concert_prompt() -> String:
+	return ["Tap the musical lantern. Watch all four notes, then repeat.", "Only the first note will glow. Tap the lantern, or ask for a hint.", "Listen by ear. Tap the lantern; Show hint is always free."][canopy_index]
+
+func _start_concert_passage() -> void:
+	transitioning = true
+	concert_moving = true
+	memory_return_delay = 0
+	queued_direction = 0
+	halo.hide()
+	active_arena().clear_lights()
+	travel_time = 0
+	travel_index = 0
+	travel_position = player.global_position
+	var from: Vector3 = active_arena().center
+	var to: Vector3 = canopy.arenas[canopy_index + 1].center
+	travel_points.assign([from, from + Vector3(6.6, 0, 2.3), to + Vector3(-6.6, 0, 2.3), to])
+	status.text = "+40 points! Your melody is growing a bridge…"
+
+func _walk_concert(delta: float) -> void:
+	travel_time += delta
+	canopy.grow_bridge(canopy_index, minf(1, travel_time / 1.2))
+	if travel_time < 1.2: return
+	var target := travel_points[travel_index]
+	var facing := target - travel_position
+	if facing.length() > 0.01: player.rotation.y = atan2(facing.x, facing.z)
+	travel_position = travel_position.move_toward(target, delta * 4.8)
+	player.global_position = travel_position + Vector3.UP * absf(sin(travel_time * 12)) * 0.07
+	for i in range(limbs.size()): limbs[i].rotation = limb_rest[i] + Vector3(sin(travel_time * 12) * 0.35 * (1 if i % 2 == 0 else -1), 0, 0)
+	if travel_position.distance_to(target) >= 0.01: return
+	travel_index += 1
+	if travel_index < travel_points.size(): return
+	canopy_index += 1
+	transitioning = false
+	concert_moving = false
+	concert_hint = false
+	memory_marks = 0
+	route.clear()
+	pads.clear()
+	route.append(active_arena().center)
+	for pad in active_arena().pads:
+		pads.append(pad)
+		route.append(pad.global_position + FOOT_OFFSET)
+	reset_player()
+	status.text = _concert_prompt()
+	_update_lesson_hud()
+
+func listen_melody(with_hint := false) -> void:
 	if paused or hopping or transitioning or memory_return_delay > 0 or not lesson.listen(): return
+	concert_hint = with_hint and lesson.stage == 3
 	queued_direction = 0
 	demo_index = 0
 	demo_elapsed = 0
 	status.text = "Listen carefully…"
-	if lesson.stage == 2:
+	if lesson.stage >= 2:
 		memory_marks = 0
-		memory_arena.clear_lights()
+		active_arena().clear_lights()
 		if route_index != 0: _start_note_hop(0)
 		_update_lesson_hud()
 
 func choose_note(from_landing := false) -> void:
-	if lesson.stage == 2 and not from_landing: return
+	if lesson.stage >= 2 and not from_landing: return
 	if paused or hopping or route_index == 0: return
 	var previous_score: int = lesson.score
 	var result: String = lesson.submit(route_index - 1)
@@ -516,17 +598,21 @@ func choose_note(from_landing := false) -> void:
 		"retry": status.text = "Try that melody again from its first note. Listen is always available."
 		"correct": status.text = "Correct! Choose note %d of %d." % [lesson.answer_index + 1, lesson.melody().size()]
 		"round": status.text = "Melody complete! Tap Listen for melody %d of 3." % [lesson.round_index + 1]
-	if lesson.stage == 2:
-		memory_marks = lesson.answer_index if result == "correct" else (3 if result in ["round", "complete"] else 0)
-		if result == "correct": status.text = "Correct! Jump to the next note · %d / 3" % memory_marks
+	if lesson.stage >= 2:
+		var length := 4 if lesson.stage == 3 else 3
+		memory_marks = lesson.answer_index if result == "correct" else (length if result in ["round", "complete"] else 0)
+		if result == "correct": status.text = "Correct! Jump to the next note · %d / %d" % [memory_marks, length]
 		if result == "retry":
-			memory_arena.wobble(route_index - 1)
+			active_arena().wobble(route_index - 1)
 			memory_return_delay = 0.60
-			memory_return_text = "Try again, or tap the centre glade to listen again."
+			memory_return_text = "Try again, or tap the lantern to listen again." if lesson.stage == 3 else "Try again, or tap the centre glade to listen again."
 			status.text = "Not quite! Back to the centre for another try."
 		elif result == "round":
-			memory_return_delay = 0.45
-			memory_return_text = "Melody complete! Tap the glade for melody %d of 3." % (lesson.round_index + 1)
+			if lesson.stage == 3: _start_concert_passage()
+			else:
+				memory_return_delay = 0.45
+				memory_return_text = "Melody complete! Tap the glade for melody %d of 3." % (lesson.round_index + 1)
+		elif result == "complete" and lesson.stage == 3: canopy.finish()
 	_update_lesson_hud()
 	_check_completion()
 
@@ -583,16 +669,16 @@ func _save_progress() -> void:
 
 func _update_lesson_hud() -> void:
 	if native_markers:
-		native_panel.offset_top = -172 if lesson.stage == 2 else -230
-		native_stages.visible = lesson.stage != 2
-		native_hint.visible = lesson.stage != 2
-		native_repeat.visible = lesson.stage != 2
-		native_listen.visible = lesson.stage != 2
-		lesson_label.visible = lesson.stage != 2
-		native_markers.visible = lesson.stage == 2
-		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat(3 - memory_marks)
-		native_step_row.visible = lesson.stage != 2
-		native_choose_button.visible = lesson.stage != 2
+		native_panel.offset_top = -172 if lesson.stage >= 2 else -230
+		native_stages.visible = lesson.stage == 1
+		native_hint.visible = lesson.stage == 1
+		native_repeat.visible = lesson.stage == 1
+		native_listen.visible = lesson.stage == 1
+		lesson_label.visible = lesson.stage == 1
+		native_markers.visible = lesson.stage >= 2
+		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat((4 if lesson.stage == 3 else 3) - memory_marks)
+		native_step_row.visible = lesson.stage == 1
+		native_choose_button.visible = lesson.stage == 1
 		native_hint.text = "Click a platform / 1–8: jump · L: listen · R: retry · P: pause" if lesson.stage == 2 else "Arrows / WASD: hop · Space: hear note · Enter: choose · L: listen · R: retry stage"
 	if reward_counter:
 		reward_counter.text = "%d  POINTS" % lesson.score
@@ -627,7 +713,7 @@ func _make_collectibles() -> void:
 		collectibles.append(orb)
 
 func toggle_camera() -> void:
-	if lesson.stage == 2: return
+	if lesson.stage >= 2: return
 	camera.overview = not camera.overview
 	if camera_button: camera_button.text = "Follow view · C" if camera.overview else "Wide view · C"
 
@@ -775,6 +861,7 @@ func _make_hud() -> void:
 	native_repeat = _button(row, "Repeat · Space", repeat_note)
 	native_choose_button = _button(row, "Choose", choose_note)
 	native_listen = _button(row, "Listen", listen_melody)
+	native_hint_button = _button(row, "Show hint", listen_melody.bind(true))
 	_button(row, "Retry", func(): start_stage(lesson.stage))
 	pause_button = _button(row, "Pause · P", toggle_pause)
 	var volume_label := Label.new()

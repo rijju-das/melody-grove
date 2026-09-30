@@ -19,10 +19,10 @@ const fs=require('node:fs');
      s=await state();
    }
  };
- const listen=async()=>{await page.locator((await state()).lesson.stage===2?'#glade-listen':'#listen').tap();await wait(()=>window.testState?.lesson.phase==='answer');};
+ const listen=async()=>{await wait(()=>!window.testState.transitioning&&!window.testState.hopping&&!window.testState.recovering);await page.locator((await state()).lesson.stage>=2?'#glade-listen':'#listen').tap();await wait(()=>window.testState?.lesson.phase==='answer');};
  const answer=async(notes)=>{
    for(const note of notes){
-     const memory=(await state()).lesson.stage===2;
+     const memory=(await state()).lesson.stage>=2;
      if(!memory)await move(note+1);
      const before=(await state()).lesson;
      if(memory)await page.locator(`[data-note="${note}"]`).tap();else await page.locator('#note-action').tap();
@@ -79,7 +79,7 @@ const fs=require('node:fs');
    console.log('PASS: stage 2 melodies, wrong answer recovery, stars and unlock');
    await page.locator('#continue-stage').tap();await wait(()=>window.testState.lesson.stage===3);
    await page.setViewportSize({width:844,height:390});
-   await page.locator('#listen').tap();await wait(()=>window.testState.lesson.phase==='listening');
+   await page.locator('#glade-listen').tap();await wait(()=>window.testState.lesson.phase==='listening');
    await page.locator('#pause').tap();await wait(()=>window.testState.paused);
    await page.waitForTimeout(1200);
    if((await state()).lesson.phase!=='listening')throw Error('Demo advanced while paused');

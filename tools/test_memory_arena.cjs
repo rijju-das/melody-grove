@@ -80,8 +80,9 @@ const assert=require('node:assert/strict');
     assert.equal(await page.evaluate(()=>window.testState.lesson.unlocked),3);
     await page.locator('#continue-stage').tap();await wait(()=>window.testState.transitioning);
     await wait(()=>window.testState.lesson.stage===3&&!window.testState.transitioning);
-    assert(await page.locator('#memory-targets').isHidden());
-    assert(await page.locator('#note-action').isVisible());
+    assert(await page.locator('#memory-targets').isVisible());
+    assert(await page.locator('#note-action').isHidden());
+    assert.equal(await page.locator('#memory-markers span').count(),4);
     assert.deepEqual(errors,[]);
     console.log('PASS: eight phone targets, glowing playback, clicks and keyboard, same-note jump, markers, recovery, 115 points, landscape and path into stage 3');
   } catch(error){await snap('error');console.log(await page.evaluate(()=>window.testState));throw error;}

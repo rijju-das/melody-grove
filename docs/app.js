@@ -194,6 +194,7 @@ const memoryButtons=memoryLabels.map((label,index)=>{
   $('memory-targets').append(button);return button;
 });
 $('glade-listen').onclick=()=>command('listen');
+$('concert-hint').onclick=()=>command('hint');
 $('memory-settings').onclick=()=>{
   const expanded=$('memory-settings').getAttribute('aria-expanded')!=='true';
   $('memory-settings').setAttribute('aria-expanded',String(expanded));
@@ -201,12 +202,12 @@ $('memory-settings').onclick=()=>{
 };
 let memoryInputBlocked=true;
 window.addEventListener('keydown',event=>{
-  if($('game-screen').hidden||activeLesson?.stage!==2||!/^Digit[1-8]$/.test(event.code)||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
+  if($('game-screen').hidden||(activeLesson?.stage||0)<2||!/^Digit[1-8]$/.test(event.code)||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
   event.preventDefault();
   if(!event.repeat&&!memoryInputBlocked)command('note',Number(event.code.slice(-1))-1);
 });
 function updateMemory(state) {
-  const memory=state.lesson.stage===2;
+  const memory=state.lesson.stage>=2;
   $('game-screen').classList.toggle('memory-game',memory);
   document.querySelector('.step-buttons').hidden=memory;
   $('memory-markers').hidden=!memory;
@@ -218,7 +219,11 @@ function updateMemory(state) {
   glade.hidden=!memory||state.transitioning||state.lesson.phase==='complete';
   glade.disabled=state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase==='listening'||state.lesson.phase==='complete';
   $('glade-prompt').textContent=state.lesson.phase==='listening'?'♪ Listening…':(state.lesson.phase==='answer'?'Listen again':'Tap to listen');
-  glade.setAttribute('aria-label',state.lesson.phase==='answer'?'Hear the melody again at the Listening Glade':'Listen to the melody at the Listening Glade');
+  const landmark=state.lesson.stage===3?'musical lantern':'Listening Glade';
+  glade.setAttribute('aria-label',`${state.lesson.phase==='answer'?'Hear the melody again':'Listen to the melody'} at the ${landmark}`);
+  $('concert-hint').hidden=state.lesson.stage!==3;
+  $('concert-hint').disabled=glade.disabled;
+  $('concert-hint').textContent=state.guided&&state.lesson.phase==='listening'?'Showing hint…':'Show hint';
   const centre=state.glade_target;
   if(centre?.length){glade.style.left=`${centre[0]*100}%`;glade.style.top=`${centre[1]*100}%`;glade.style.width=`${centre[2]*100}%`;}
   $('memory-settings').hidden=!memory;
@@ -229,10 +234,15 @@ function updateMemory(state) {
     button.hidden=!point||point[0]<0||point[0]>1||point[1]<0||point[1]>1;
     if(point){button.style.left=`${point[0]*100}%`;button.style.top=`${point[1]*100}%`;button.style.width=`${point[2]*100}%`;}
   });
-  $('memory-markers').setAttribute('aria-label',`${state.memory_marks||0} of 3 notes correct`);
+  const count=state.lesson.stage===3?4:3;
+  if($('memory-markers').children.length!==count){
+    $('memory-markers').replaceChildren(...Array.from({length:count},()=>document.createElement('span')));
+  }
+  $('memory-markers').setAttribute('aria-label',`${state.memory_marks||0} of ${count} notes correct`);
   [...$('memory-markers').children].forEach((marker,i)=>{marker.classList.toggle('filled',i<(state.memory_marks||0));marker.textContent=i<(state.memory_marks||0)?'✓':i+1;});
   document.querySelector('.keyboard').textContent=memory?'Click a platform or press 1–8 to jump · L: listen again':'Arrows / WASD: hop · Enter: choose · L: listen · Space: hear note · C: camera';
   if(memory)$('view-label').textContent=state.lesson.phase==='listening'?'WATCH THE GLOW':'MUSICAL MEMORY';
+  if(state.lesson.stage===3)$('view-label').textContent=state.guided&&state.lesson.phase==='listening'?'GUIDED REPLAY':['WATCH & REPEAT','FIRST NOTE GLOWS','LISTEN BY EAR'][Math.min((state.clearing||1)-1,2)];
 }
 
 window.groveState = state => {
@@ -245,15 +255,15 @@ window.groveState = state => {
   updateRewards(state);
   updateMemory(state);
   $('path-transition').hidden=!state.transitioning;
-  $('path-destination').textContent=state.transitioning?`Entering ${['','Echo meadow','Canopy concert'][lesson.stage]}…`:'';
-  $('lesson-title').textContent=lesson.stage===2?`Echo meadow · Melody ${Math.min(lesson.round,3)}/3`:`0${lesson.stage} · ${lesson.title}`;
+  $('path-destination').textContent=state.concert_moving?`Growing the bridge to clearing ${state.clearing+1}…`:(state.transitioning?`Entering ${['','Echo meadow','Canopy concert'][lesson.stage]}…`:'');
+  $('lesson-title').textContent=lesson.stage===3?`Canopy concert · Clearing ${state.clearing}/3`:(lesson.stage===2?`Echo meadow · Melody ${Math.min(lesson.round,3)}/3`:`0${lesson.stage} · ${lesson.title}`);
   $('stage-score').textContent=`${lesson.score} pts`;
   $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 gems collected · 80 points to unlock stage 2` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
   $('lesson-progress').max=lesson.stage===1?8:3;
   $('lesson-progress').value=lesson.stage===1?lesson.collected:(lesson.phase==='complete'?3:lesson.round-1);
   $('note-action').dataset.command=lesson.stage===1?'repeat':'choose';
   $('note-action').textContent=lesson.stage===1?'♪ Play note':'✓ Choose note';
-  $('listen').hidden=lesson.stage!==3;
+  $('listen').hidden=true;
   $('listen').textContent=lesson.phase==='listening'?'Listening…':(lesson.phase==='answer'?'♪ Hear melody again':'♪ Listen to melody');
   const locked=state.paused||state.transitioning||lesson.phase==='listening'||lesson.phase==='complete';
   ['back','next'].forEach(name=>document.querySelector(`[data-command="${name}"]`).disabled=locked);
@@ -268,7 +278,7 @@ window.groveState = state => {
     $('earned-stars').textContent='★ '.repeat(lesson.stars)+'☆ '.repeat(3-lesson.stars);
     $('earned-stars').setAttribute('aria-label',`${lesson.stars} of 3 stars`);
     $('complete-title').textContent=lesson.stage===3?'You did it!':'Hurray!';
-    $('complete-message').textContent=`Well done! You crossed stage ${['one','two','three'][lesson.stage-1]}.`;
+    $('complete-message').textContent=lesson.stage===3?'Your music brought the canopy to life!':`Well done! You crossed stage ${['one','two','three'][lesson.stage-1]}.`;
     $('complete-summary').textContent=`${lesson.score} points earned · ${lesson.stage===1?'8 gems collected':lesson.stars+' stars earned'}`;
     $('next-stage-hint').textContent=lesson.stage<3?`Stage ${lesson.stage+1} unlocked · ${['','Echo meadow','Canopy concert'][lesson.stage]}`:'The whole grove is yours. Keep singing!';
     $('save-result').textContent=state.saved?'Best score and stage unlock saved on this device.':'Your browser could not save progress. Keep this tab open to continue.';

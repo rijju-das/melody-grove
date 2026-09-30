@@ -46,3 +46,5 @@
 @media(max-width:700px){.memory-game .controls{grid-template-columns:1fr auto;gap:6px 10px;padding:10px 14px}.memory-game #memory-markers{grid-column:2;grid-row:1}.memory-game .secondary-controls{grid-column:2;grid-row:2}.memory-game .note-heading p{font-size:11px}.memory-game.memory-settings-open .secondary-controls{grid-column:1 / -1;grid-row:3;justify-content:flex-end}}
 @media(orientation:landscape) and (max-height:600px){.memory-game #game-layout{height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}.memory-game .controls{padding:6px 14px}.memory-game .note-heading p{font-size:11px}.glade-arrow{font-size:25px;line-height:22px}#glade-prompt{font-size:10px;padding:3px 8px}}
 @media(prefers-reduced-motion:reduce){.glade-guide{animation:none}}
+
+.memory-game #concert-hint{border-color:#efd081;color:#ffdf95;font-size:11px;padding:5px 8px;max-width:90px}

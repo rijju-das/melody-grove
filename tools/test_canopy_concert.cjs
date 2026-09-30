@@ -1,0 +1,93 @@
+const {chromium}=require('/Users/rijju/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+  const browser=await chromium.launch({channel:'chrome',headless:true});
+  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const wait=(fn,arg)=>page.waitForFunction(fn,arg,{timeout:30000});
+  const snap=name=>page.screenshot({path:`/Users/rijju/Documents/Blender_2026/godot-diagnostics/canopy-${name}.png`,fullPage:true});
+  const state=()=>page.evaluate(()=>window.testState);
+  const ready=()=>wait(()=>!window.testState.transitioning&&!window.testState.hopping&&!window.testState.recovering);
+  const listen=async(hint=false)=>{
+    await ready();await page.locator(hint?'#concert-hint':'#glade-listen').tap();
+    await wait(()=>window.testState.lesson.phase==='listening');
+  };
+  const jump=async(note)=>{
+    const before=(await state()).lesson;
+    await page.locator(`[data-note="${note}"]`).tap();
+    await wait(old=>{const l=window.testState.lesson;return l.answer!==old.answer||l.round!==old.round||l.phase!==old.phase||l.mistakes!==old.mistakes;},before);
+  };
+  try{
+    await page.goto('http://127.0.0.1:4321/');
+    await page.evaluate(()=>localStorage.setItem('melody-grove-progress-v1',JSON.stringify({version:1,records:[{complete:true,score:80,stars:3},{complete:true,score:120,stars:3},{complete:false,score:0,stars:0}]})));
+    await page.reload();
+    await page.getByText('Ready offline ✓',{exact:true}).first().waitFor({timeout:60000});
+    await page.evaluate(()=>{const report=window.groveState;window.groveState=s=>{window.testState=s;report(s);};});
+    await page.locator('[data-stage="3"]').tap();
+    await page.locator('#loading').waitFor({state:'hidden',timeout:60000});
+    await wait(()=>window.testState?.lesson.stage===3);await page.waitForTimeout(900);
+    assert(await page.locator('#note-action').isHidden());
+    assert(await page.locator('#listen').isHidden());
+    assert.equal(await page.locator('#memory-markers span').count(),4);
+    assert((await page.locator('.controls').boundingBox()).height<165);
+    await snap('first-phone');
+    if(process.argv.includes('--layout-only')){
+      await page.setViewportSize({width:844,height:390});await page.waitForTimeout(900);await snap('first-landscape');
+      assert((await page.locator('.controls').boundingBox()).height<100);
+      await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(900);await snap('desktop');
+      assert.deepEqual(errors,[]);
+      console.log('PASS: final treetop visuals and phone, landscape, desktop layouts');
+      return;
+    }
+    await listen();await page.waitForTimeout(180);await snap('first-glow');
+    assert(await page.locator('#concert-hint').isDisabled());
+    await wait(()=>window.testState.lesson.phase==='answer');
+    for(const note of [0,2,4,2])await jump(note);
+    await wait(()=>window.testState.concert_moving);
+    assert.equal((await state()).lesson.score,40);
+    await page.waitForTimeout(400);await page.locator('#pause').tap();await wait(()=>window.testState.paused);
+    await snap('growing-bridge');
+    assert(await page.locator('#glade-listen').isHidden());
+    assert(await page.locator('#concert-hint').isDisabled());
+    await page.locator('#pause').tap();await wait(()=>!window.testState.paused);
+    await wait(()=>window.testState.clearing===2&&!window.testState.transitioning);
+    await listen();await page.waitForTimeout(1500);
+    assert.match((await state()).text,/Listen carefully/);
+    await snap('second-listening');
+    await wait(()=>window.testState.lesson.phase==='answer');
+    await jump(0);await ready();
+    assert.equal((await state()).lesson.score,40);
+    assert.equal((await state()).lesson.mistakes,1);
+    await listen(true);assert.equal((await state()).guided,true);await snap('hint');
+    await wait(()=>window.testState.lesson.phase==='answer');
+    for(const note of [2,3,4,7])await jump(note);
+    await wait(()=>window.testState.clearing===3&&!window.testState.transitioning);
+    await page.setViewportSize({width:844,height:390});await page.waitForTimeout(900);
+    assert((await page.locator('.controls').boundingBox()).height<100);
+    assert.equal(await page.locator('#view-label').textContent(),'LISTEN BY EAR');
+    await listen();await page.waitForTimeout(200);
+    assert.match((await state()).text,/Listen carefully/);
+    await snap('third-landscape');
+    await wait(()=>window.testState.lesson.phase==='answer');
+    await jump(7);await listen(true);
+    await wait(()=>window.testState.lesson.phase==='answer');
+    assert.equal((await state()).step,0);
+    assert.equal((await state()).lesson.mistakes,1);
+    for(const note of [7,4,2,0])await jump(note);
+    await snap('finale');
+    await page.locator('#complete-dialog').waitFor({state:'visible'});
+    assert.equal((await state()).lesson.score,145);
+    assert.equal((await state()).lesson.stars,2);
+    assert.equal((await state()).lesson.total,345);
+    assert.match(await page.locator('#complete-message').textContent(),/canopy to life/);
+    await snap('complete');
+    await context.setOffline(true);await page.reload();
+    await page.getByText('345 points saved',{exact:true}).waitFor();
+    assert(await page.locator('[data-stage="3"]').isEnabled());
+    assert.deepEqual(errors,[]);
+    console.log('PASS: three clearings, phone taps, compact HUD, lantern playback, hints, bridge crossings, pause, gentle retry, 145 points, finale and offline save');
+  }catch(error){await snap('error');console.log(await state());throw error;}
+  finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1);});

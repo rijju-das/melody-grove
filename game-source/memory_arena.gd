@@ -28,6 +28,27 @@ func setup(section: Node3D) -> void:
 	_disc(self, 1.25, 0.30, -0.20, "bd8e50")
 	_disc(self, 1.16, 0.12, -0.03, "f3df9b")
 	_label(self, "LISTENING GLADE", Vector3(0, 0.12, 0.75), 27)
+	_build_notes()
+	_path(entry, center)
+	_path(center, exit_waypoint)
+	_path(exit_waypoint, exit_point)
+	var exit_stump := Node3D.new()
+	add_child(exit_stump)
+	exit_stump.global_position = exit_point
+	_disc(exit_stump, 1.0, 0.35, -0.20, "c89a58")
+	_disc(exit_stump, 0.94, 0.08, 0.01, "f0d58b")
+
+func setup_canopy(at: Vector3, index: int) -> void:
+	center = at
+	global_position = center
+	_disc(self, 6.9, 0.65, -0.65, ["5c956b", "548f8f", "7877a4"][index])
+	_disc(self, 6.65, 0.10, -0.30, ["9ab97a", "8fbca3", "abb9ac"][index])
+	_disc(self, 1.30, 0.32, -0.16, "b78d55")
+	_disc(self, 1.18, 0.10, 0.02, "f6d78d")
+	_label(self, "MUSICAL LANTERN", Vector3(0, 0.15, 0.9), 25)
+	_build_notes()
+
+func _build_notes() -> void:
 	for i in range(8):
 		var pad := Node3D.new()
 		add_child(pad)
@@ -51,14 +72,6 @@ func setup(section: Node3D) -> void:
 		rings.append(ring)
 		pads.append(pad)
 		pulses.append(0.0)
-	_path(entry, center)
-	_path(center, exit_waypoint)
-	_path(exit_waypoint, exit_point)
-	var exit_stump := Node3D.new()
-	add_child(exit_stump)
-	exit_stump.global_position = exit_point
-	_disc(exit_stump, 1.0, 0.35, -0.20, "c89a58")
-	_disc(exit_stump, 0.94, 0.08, 0.01, "f0d58b")
 
 func _material(color: String, unshaded := false) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
