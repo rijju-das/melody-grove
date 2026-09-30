@@ -68,6 +68,8 @@ function animateReward(reward, score) {
 function updateRewards(state) {
   const lesson=state.lesson;
   if(rewardAttempt!==state.attempt) {
+    $('game-screen').classList.remove('memory-settings-open');
+    $('memory-settings').setAttribute('aria-expanded','false');
     clearRewards();rewardAttempt=state.attempt;lastReward=state.reward?.id||0;
     displayedPoints=lesson.score;$('points-count').textContent=lesson.score;
     completedShown=false;
@@ -209,6 +211,7 @@ window.addEventListener('keydown',event=>{
 function updateMemory(state) {
   const memory=state.lesson.stage>=2;
   $('game-screen').classList.toggle('memory-game',memory);
+  $('game-screen').classList.add('compact-game');
   document.querySelector('.step-buttons').hidden=memory;
   $('memory-markers').hidden=!memory;
   $('camera-mode').hidden=memory;
@@ -226,7 +229,7 @@ function updateMemory(state) {
   $('concert-hint').textContent=state.guided&&state.lesson.phase==='listening'?'Showing hint…':'Show hint';
   const centre=state.glade_target;
   if(centre?.length){glade.style.left=`${centre[0]*100}%`;glade.style.top=`${centre[1]*100}%`;glade.style.width=`${centre[2]*100}%`;}
-  $('memory-settings').hidden=!memory;
+  $('memory-settings').hidden=false;
   memoryButtons.forEach((button,i)=>{
     button.disabled=!tappable||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase==='complete'||(memory&&state.lesson.phase!=='answer');
     button.setAttribute('aria-label',memory?`Jump to ${memoryLabels[i]} (key ${i+1})`:`Jump to ${memoryLabels[i]} and hear its note`);
@@ -240,7 +243,7 @@ function updateMemory(state) {
   }
   $('memory-markers').setAttribute('aria-label',`${state.memory_marks||0} of ${count} notes correct`);
   [...$('memory-markers').children].forEach((marker,i)=>{marker.classList.toggle('filled',i<(state.memory_marks||0));marker.textContent=i<(state.memory_marks||0)?'✓':i+1;});
-  document.querySelector('.keyboard').textContent=memory?'Click a platform or press 1–8 to jump · L: listen again':'Arrows / WASD: hop · Enter: choose · L: listen · Space: hear note · C: camera';
+  document.querySelector('.keyboard').textContent=memory?'Click a platform or press 1–8 to jump · L: listen again':'Tap platforms or use arrows / WASD to hop · Space: hear note · C: camera';
   if(memory)$('view-label').textContent=state.lesson.phase==='listening'?'WATCH THE GLOW':'MUSICAL MEMORY';
   if(state.lesson.stage===3)$('view-label').textContent=state.guided&&state.lesson.phase==='listening'?'GUIDED REPLAY':['WATCH & REPEAT','FIRST NOTE GLOWS','LISTEN BY EAR'][Math.min((state.clearing||1)-1,2)];
 }

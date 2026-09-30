@@ -9,9 +9,14 @@ const output='/Users/rijju/Documents/Blender_2026/godot-diagnostics';
   page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   const wait=fn=>page.waitForFunction(fn,null,{timeout:20000});
   const snap=name=>page.screenshot({path:`${output}/${name}.png`,fullPage:true});
+  const settings=async(open)=>{
+    if((await page.locator('#memory-settings').getAttribute('aria-expanded')==='true')!==open)await page.locator('#memory-settings').tap();
+  };
   const move=async(direction,step)=>{
+    await settings(true);
     await page.locator(`[data-command="${direction}"]`).tap();
     await page.waitForFunction(n=>window.testState.step===n&&!window.testState.hopping,step);
+    await settings(false);
   };
   try {
     await page.goto('http://127.0.0.1:4321/');
@@ -19,6 +24,11 @@ const output='/Users/rijju/Documents/Blender_2026/godot-diagnostics';
     await page.locator('[data-stage="1"]').tap();
     await page.locator('#loading').waitFor({state:'hidden',timeout:60000});
     await wait(()=>window.testState?.attempt>0);
+    assert((await page.locator('.controls').boundingBox()).height<130,'Stage 1 has a compact phone bar');
+    assert(await page.locator('#volume').isHidden());
+    assert(await page.locator('[data-command="next"]').isHidden());
+    await settings(true);assert(await page.locator('#volume').isVisible());assert(await page.locator('#sound-check').isVisible());
+    await settings(false);
     await snap('follow-start-phone');
     await page.locator('[data-note="0"]').tap();
     await wait(()=>window.testState.step===1&&!window.testState.hopping);
@@ -48,7 +58,7 @@ const output='/Users/rijju/Documents/Blender_2026/godot-diagnostics';
     await move('next',2);await move('next',3);
     await page.waitForTimeout(1000);await snap('follow-step3-phone');
     // Reset while a pickup is in flight: old animation must not change the new counter.
-    await move('next',4);await page.locator('[data-command="restart"]').tap();
+    await move('next',4);await settings(true);await page.locator('[data-command="restart"]').tap();
     await wait(()=>window.testState.step===0&&window.testState.lesson.score===0);
     await page.waitForTimeout(1200);
     assert.equal(await page.locator('#points-count').textContent(),'0');
@@ -61,6 +71,7 @@ const output='/Users/rijju/Documents/Blender_2026/godot-diagnostics';
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.setViewportSize({width:844,height:390});await page.waitForTimeout(1000);
     await snap('follow-landscape');
+    assert((await page.locator('.controls').boundingBox()).height<100,'Stage 1 has a slim landscape bar');
     assert(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+1),'Landscape overflows');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Horizontal overflow');
     await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(1000);await snap('follow-desktop');

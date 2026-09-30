@@ -77,6 +77,8 @@ var native_stages: HBoxContainer
 var native_repeat: Button
 var native_listen: Button
 var native_panel: PanelContainer
+var native_settings: VBoxContainer
+var native_settings_open := false
 
 func _ready() -> void:
 	_bind_keys()
@@ -463,6 +465,7 @@ func start_stage(number: int, arriving := false) -> void:
 	memory_return_delay = 0
 	memory_return_text = "Tap the Listening Glade to hear the melody."
 	memory_arena.reset()
+	native_settings_open = false
 	attempt_id += 1
 	success_audio.stop()
 	success_overlay.hide()
@@ -669,17 +672,19 @@ func _save_progress() -> void:
 
 func _update_lesson_hud() -> void:
 	if native_markers:
-		native_panel.offset_top = -172 if lesson.stage >= 2 else -230
-		native_stages.visible = lesson.stage == 1
-		native_hint.visible = lesson.stage == 1
+		native_settings.visible = native_settings_open
+		native_stages.visible = true
+		native_hint.visible = true
 		native_repeat.visible = lesson.stage == 1
-		native_listen.visible = lesson.stage == 1
-		lesson_label.visible = lesson.stage == 1
+		native_listen.visible = false
+		lesson_label.visible = false
 		native_markers.visible = lesson.stage >= 2
 		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat((4 if lesson.stage == 3 else 3) - memory_marks)
 		native_step_row.visible = lesson.stage == 1
-		native_choose_button.visible = lesson.stage == 1
-		native_hint.text = "Click a platform / 1–8: jump · L: listen · R: retry · P: pause" if lesson.stage == 2 else "Arrows / WASD: hop · Space: hear note · Enter: choose · L: listen · R: retry stage"
+		native_choose_button.visible = false
+		native_panel.offset_top = -(126 if lesson.stage == 1 else 162) - (190 if native_settings_open else 0)
+		native_panel.offset_bottom = -16
+		native_hint.text = "Click a platform / 1–8: jump · L: listen · R: retry · P: pause" if lesson.stage >= 2 else "Tap platforms or use arrows / WASD to hop · Space: hear note · R: retry"
 	if reward_counter:
 		reward_counter.text = "%d  POINTS" % lesson.score
 		gem_counter.text = "◆  %d / 8 GEMS" % lesson.collected.size() if lesson.stage == 1 else "♪  %d / 3 MELODIES" % mini(lesson.round_index, 3)
@@ -876,6 +881,21 @@ func _make_hud() -> void:
 	volume.focus_mode = Control.FOCUS_NONE
 	volume.value_changed.connect(_set_volume)
 	row.add_child(volume)
+	native_settings = VBoxContainer.new()
+	native_settings.hide()
+	box.add_child(native_settings)
+	native_stages.reparent(native_settings)
+	var extra_controls := HBoxContainer.new()
+	extra_controls.alignment = BoxContainer.ALIGNMENT_CENTER
+	extra_controls.add_theme_constant_override("separation", 12)
+	native_settings.add_child(extra_controls)
+	for control in row.get_children():
+		if control != pause_button and control != native_hint_button:
+			control.reparent(extra_controls)
+	native_hint.reparent(native_settings)
+	_button(row, "Settings", func():
+		native_settings_open = not native_settings_open
+		_update_lesson_hud())
 	if not OS.has_feature("web"):
 		native_glade = Button.new()
 		layer.add_child(native_glade)

@@ -11,6 +11,7 @@ const fs=require('node:fs');
  const wait=async(fn,arg)=>page.waitForFunction(fn,arg,{timeout:15000});
  const wrap=()=>page.evaluate(()=>{const report=window.groveState;window.groveState=s=>{window.testState=s;report(s);};});
  const move=async(target)=>{
+   if(await page.locator('#memory-settings').getAttribute('aria-expanded')!=='true')await page.locator('#memory-settings').tap();
    let s=await state();
    while(s.step!==target){
      const next=s.step+(target>s.step?1:-1);
@@ -18,6 +19,7 @@ const fs=require('node:fs');
      await wait(n=>window.testState?.step===n&&!window.testState.hopping,next);
      s=await state();
    }
+   await page.locator('#memory-settings').tap();
  };
  const listen=async()=>{await wait(()=>!window.testState.transitioning&&!window.testState.hopping&&!window.testState.recovering);await page.locator((await state()).lesson.stage>=2?'#glade-listen':'#listen').tap();await wait(()=>window.testState?.lesson.phase==='answer');};
  const answer=async(notes)=>{

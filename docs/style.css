@@ -19,21 +19,21 @@
 
 #memory-targets{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}#memory-targets button{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;min-width:44px;min-height:44px;border:0;border-radius:50%;padding:0;background:transparent;pointer-events:auto;touch-action:manipulation}#memory-targets button:disabled{pointer-events:none;opacity:1}#memory-targets button:hover:not(:disabled){background:#fff8c72b;box-shadow:0 0 0 2px #fff8c775}#memory-targets button:focus-visible{outline:3px solid #fff7bb;outline-offset:0}#memory-markers{display:flex;justify-content:center;gap:12px;margin:12px 0 8px}#memory-markers span{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:2px solid #719477;color:#bdd0b0;font-size:14px;font-weight:750;background:#214d3d}#memory-markers span.filled{color:#173e35;border-color:#ffdd87;background:#ffdd87}.memory-game .listen-button{margin-top:10px;font-size:16px;min-height:52px}.memory-game .note-heading{min-height:48px}.memory-game .controls{padding-top:12px}@media(max-width:700px){.memory-game #stage{aspect-ratio:.92}.memory-game #memory-markers{margin:8px 0}.memory-game .listen-button{margin:8px 0 10px}}@media(orientation:landscape) and (max-height:600px){.memory-game #stage{aspect-ratio:auto}.memory-game #memory-markers{margin:8px 0;gap:8px}.memory-game .listen-button{font-size:13px;min-height:44px}.memory-game .note-heading{min-height:40px}}
 
-/* Stage 2 keeps the action in the grove, with a small bottom HUD. */
-.memory-game #game-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:calc(100dvh - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:0;max-width:none}
-.memory-game #stage{height:100%;max-height:none;min-height:0;aspect-ratio:auto}
-.memory-game .controls{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:4px 18px;padding:10px 22px;border-radius:18px 18px 0 0;margin:0;overflow:visible;max-height:none}
-.memory-game .lesson-heading{font-size:12px;margin:0}
-.memory-game #stage-score,.memory-game #lesson-goal,.memory-game #lesson-progress,.memory-game #step-count,.memory-game .keyboard,.memory-game .sound-row{display:none}
-.memory-game #memory-markers{margin:0;gap:8px;grid-column:2;grid-row:1 / 3}
-.memory-game #memory-markers span{width:28px;height:28px;font-size:12px}
-.memory-game .note-heading{grid-row:2;grid-column:1;min-height:0;height:auto;display:block;text-align:left;margin:0}
-.memory-game .note-heading p{font-size:12px;margin:0;line-height:1.35}
-.memory-game .secondary-controls{grid-column:3;grid-row:1 / 3;margin:0;gap:6px;flex-wrap:nowrap}
-.memory-game .secondary-controls button{min-height:44px;min-width:44px;font-size:12px}
-.memory-game .secondary-controls [data-command="restart"],.memory-game .secondary-controls label{display:none}
-.memory-game.memory-settings-open .secondary-controls [data-command="restart"],.memory-game.memory-settings-open .secondary-controls label{display:flex}
-.memory-game.memory-settings-open .secondary-controls{flex-wrap:wrap}
+/* Every stage keeps the action in the grove, with a small bottom HUD. */
+.compact-game #game-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:calc(100dvh - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:0;max-width:none}
+.compact-game #stage{height:100%;max-height:none;min-height:0;aspect-ratio:auto}
+.compact-game .controls{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:4px 18px;padding:10px 22px;border-radius:18px 18px 0 0;margin:0;overflow:visible;max-height:none}
+.compact-game .lesson-heading{font-size:12px;margin:0}
+.compact-game #stage-score,.compact-game #lesson-goal,.compact-game #lesson-progress,.compact-game #step-count,.compact-game .keyboard,.compact-game .sound-row{display:none}
+.compact-game #memory-markers{margin:0;gap:8px;grid-column:2;grid-row:1 / 3}
+.compact-game #memory-markers span{width:28px;height:28px;font-size:12px}
+.compact-game .note-heading{grid-row:2;grid-column:1;min-height:0;height:auto;display:block;text-align:left;margin:0}
+.compact-game .note-heading p{font-size:12px;margin:0;line-height:1.35}
+.compact-game .secondary-controls{grid-column:3;grid-row:1 / 3;margin:0;gap:6px;flex-wrap:nowrap}
+.compact-game .secondary-controls button{min-height:44px;min-width:44px;font-size:12px}
+.compact-game .secondary-controls [data-command="restart"],.compact-game .secondary-controls label{display:none}
+.compact-game.memory-settings-open .secondary-controls [data-command="restart"],.compact-game.memory-settings-open .secondary-controls label{display:flex}
+.compact-game.memory-settings-open .secondary-controls{flex-wrap:wrap}
 #glade-listen{position:absolute;z-index:2;transform:translate(-50%,-50%);aspect-ratio:1;min-width:56px;min-height:56px;border:2px solid #ffdf8199;border-radius:50%;background:#ffe49c16;padding:0;touch-action:manipulation}
 #glade-listen:hover:not(:disabled){background:#fff5bd33;border-color:#ffdf81}
 #glade-listen:disabled{opacity:1;cursor:default;border-color:transparent;background:transparent}
@@ -43,8 +43,13 @@
 #glade-listen:disabled .glade-guide{animation:none;opacity:.75;pointer-events:none}
 #glade-listen:disabled .glade-arrow{visibility:hidden}
 @keyframes glade-nudge{50%{translate:0 5px}}
-@media(max-width:700px){.memory-game .controls{grid-template-columns:1fr auto;gap:6px 10px;padding:10px 14px}.memory-game #memory-markers{grid-column:2;grid-row:1}.memory-game .secondary-controls{grid-column:2;grid-row:2}.memory-game .note-heading p{font-size:11px}.memory-game.memory-settings-open .secondary-controls{grid-column:1 / -1;grid-row:3;justify-content:flex-end}}
-@media(orientation:landscape) and (max-height:600px){.memory-game #game-layout{height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}.memory-game .controls{padding:6px 14px}.memory-game .note-heading p{font-size:11px}.glade-arrow{font-size:25px;line-height:22px}#glade-prompt{font-size:10px;padding:3px 8px}}
+@media(max-width:700px){.compact-game .controls{grid-template-columns:1fr auto;gap:6px 10px;padding:10px 14px}.compact-game #memory-markers{grid-column:2;grid-row:1}.compact-game .secondary-controls{grid-column:2;grid-row:2}.compact-game .note-heading p{font-size:11px}.compact-game.memory-settings-open .secondary-controls{grid-column:1 / -1;grid-row:3;justify-content:flex-end}}
+@media(orientation:landscape) and (max-height:600px){.compact-game #game-layout{height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}.compact-game .controls{padding:6px 14px}.compact-game .note-heading p{font-size:11px}.glade-arrow{font-size:25px;line-height:22px}#glade-prompt{font-size:10px;padding:3px 8px}}
 @media(prefers-reduced-motion:reduce){.glade-guide{animation:none}}
 
-.memory-game #concert-hint{border-color:#efd081;color:#ffdf95;font-size:11px;padding:5px 8px;max-width:90px}
+.compact-game #concert-hint{border-color:#efd081;color:#ffdf95;font-size:11px;padding:5px 8px;max-width:90px}
+
+.compact-game .step-buttons{display:none}
+.compact-game.memory-settings-open .step-buttons:not([hidden]){display:flex;grid-column:1 / -1;grid-row:4;justify-content:center;margin:4px 0 0}
+.compact-game.memory-settings-open .step-buttons button{flex:0 1 160px;min-height:44px;padding:8px 12px;font-size:12px}
+.compact-game.memory-settings-open .sound-row{display:flex;grid-column:1 / -1;grid-row:5;justify-content:center;margin:0}

@@ -15,7 +15,10 @@ switches between follow and wide views. Singing is optional; no microphone is re
 
 In stage 1, tap any visible note platform to jump directly to it, hear the note,
 and collect its gem. Tapping a collected platform plays its note again without
-adding duplicate points. Back/Next and keyboard movement also remain available.
+adding duplicate points. Keyboard movement remains available; Back/Next and Play note are under Settings.
+
+All stages use the same compact bottom bar. Settings reveals retry, volume, and
+sound check; stage 1 also offers movement buttons there.
 
 In stages 2 and 3, click/tap any note platform or press **1–8** to jump directly to it.
 Landing chooses that note automatically. The camera keeps the whole circle in view.
