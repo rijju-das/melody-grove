@@ -4,13 +4,14 @@
 [ext_resource type="Script" path="res://grove_view.gd" id="2_view"]
 [ext_resource type="Script" path="res://melody_controller.gd" id="3_game"]
 [ext_resource type="Script" path="res://follow_camera.gd" id="4_camera"]
+[ext_resource type="PackedScene" path="res://assets/storybook_explorer.glb" id="5_explorer"]
 
 [sub_resource type="Environment" id="Environment_grove"]
 background_mode = 1
-background_color = Color(0.66, 0.80, 0.82, 1)
+background_color = Color(0.70, 0.82, 0.76, 1)
 ambient_light_source = 2
 ambient_light_color = Color(0.9098039, 0.9411765, 0.9490196, 1)
-ambient_light_energy = 0.30
+ambient_light_energy = 0.4
 reflected_light_source = 1
 tonemap_mode = 2
 tonemap_white = 6.0
@@ -20,6 +21,15 @@ script = ExtResource("2_view")
 
 [node name="Melody Grove • musical forest" parent="." unique_id=1433227163 instance=ExtResource("1_ig7tw")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8052565, 1.1920929e-07, -0.12763524)
+
+[node name="MS_Player" parent="Melody Grove • musical forest"]
+visible = false
+
+[node name="Player" type="Node3D" parent="."]
+position = Vector3(-11.705256, 0.85500014, 4.872365)
+
+[node name="StorybookExplorer" parent="Player" instance=ExtResource("5_explorer")]
+scale = Vector3(1.12, 1.12, 1.12)
 
 [node name="GameCamera" type="Camera3D" parent="."]
 script = ExtResource("4_camera")
@@ -34,7 +44,7 @@ far = 150.0
 [node name="Sunlight" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-55, -30, 0)
 light_color = Color(1, 0.95686275, 0.89411765, 1)
-light_energy = 0.18
+light_energy = 0.23
 light_specular = 0.3
 shadow_enabled = true
 directional_shadow_max_distance = 70.0

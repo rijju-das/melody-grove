@@ -3,6 +3,31 @@
 A four-stage musical forest game made with Blender and Godot. Move a character
 between note platforms, listen, sing along, and build musical memory.
 
+## Storybook visual pass
+
+The playable character is a rounded Blender explorer with a leaf cap, teal coat,
+scarf and satchel. The runtime animates its shoulder and hip pivots, adds blinking
+and idle movement, and gives jumps a small stretch and landings a squash and
+fading ring. Flowers, moving crowns and small fireflies decorate the paths; the
+singing tree has a layered forest background. Decorations only animate in visible
+sections and pause with the game. Lighting and 2× edge smoothing keep the forms
+readable without adding heavy post-processing.
+
+The explorer is saved directly under `Player` in `main.tscn`, so it appears in
+the editor as well as during play. The original imported character is hidden;
+the playable character stays outside the duplicated forest sections.
+
+Edit `art-source/storybook_explorer.blend` in Blender, or regenerate that file and
+`game-source/assets/storybook_explorer.glb` with Blender's background runner and
+`tools/build_storybook_explorer.py`. The builder replaces those two generated
+files, so save manual Blender edits separately before regenerating. Godot imports
+the GLB automatically. `game-source/storybook_presentation.gd` owns the decorative
+effects; lesson rules and pitch recognition remain in their existing scripts.
+
+For a visual check, run `game-source/test_storybook_view.gd` with Godot's Dummy
+audio driver. It captures all four stages and an explorer close-up in the sibling
+`godot-diagnostics` folder without reading or writing the player's saved progress.
+
 ## Play
 
 GitHub Pages serves the `docs` folder on `main`:

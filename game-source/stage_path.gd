@@ -8,9 +8,9 @@ var opened := [0.0, 0.0, 0.0]
 var exit_trees: Array = []
 var exit_tree_positions: Array = []
 
-func setup(forest: Node3D, player: Node3D) -> void:
-	# Keep one player when the forest sections are duplicated or hidden.
-	player.reparent(self, true)
+func setup(forest: Node3D) -> void:
+	# main.tscn keeps the player outside the forest, so duplicating or hiding
+	# forest sections never duplicates or hides the playable character.
 	sections.append(forest)
 	for i in range(1, 4):
 		# Copy the live static tree directly. Re-instantiating the imported scene

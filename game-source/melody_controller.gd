@@ -96,7 +96,7 @@ func _ready() -> void:
 	_bind_keys()
 	camera = get_parent().get_node("GameCamera")
 	var forest := get_parent().get_node("Melody Grove • musical forest")
-	player = forest.find_child("MS_Player", true, false) as Node3D
+	player = get_parent().get_node("Player") as Node3D
 	var spawn := forest.find_child("Grove_starting surface", true, false) as Node3D
 	if player == null or spawn == null:
 		push_error("Melody Grove: missing player or starting platform.")
@@ -118,7 +118,7 @@ func _ready() -> void:
 			limb_rest.append(limb.rotation)
 	stage_path = preload("res://stage_path.gd").new()
 	add_child(stage_path)
-	stage_path.setup(forest, player)
+	stage_path.setup(forest)
 	memory_arena = preload("res://memory_arena.gd").new()
 	stage_path.sections[1].add_child(memory_arena)
 	memory_arena.setup(stage_path.sections[1])
@@ -145,6 +145,9 @@ func _ready() -> void:
 	_make_halo()
 	_make_collectibles()
 	_make_hud()
+	var presentation := preload("res://storybook_presentation.gd").new()
+	add_child(presentation)
+	presentation.setup(self)
 	_load_progress()
 	start_stage(1)
 	if OS.has_feature("web"):

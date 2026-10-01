@@ -15,7 +15,7 @@ func setup_stairway(section: Node3D, at: Vector3, entry_point: Vector3) -> void:
 	var trunk := Node3D.new()
 	add_child(trunk)
 	trunk.position = Vector3(0, 2, -5)
-	_disc(trunk, 1.3, 36, -10, "896343")
+	_disc(trunk, 1.3, 20, 0, "896343")
 	for j in range(9):
 		var crown := MeshInstance3D.new()
 		var sphere := SphereMesh.new()
