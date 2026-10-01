@@ -23,19 +23,25 @@
     return {hz:0,rms};
   }
   class VoiceInput {
-    constructor({send,report,allowed}){Object.assign(this,{send,report,allowed});this.serial=0;this.stream=null;this.context=null;this.timer=null;this.pending=false;this.mode='off';this.listening=false;}
+    constructor({send,report,allowed,onError=()=>{}}){Object.assign(this,{send,report,allowed,onError});this.serial=0;this.stream=null;this.context=null;this.timer=null;this.pending=false;this.mode='off';this.listening=false;}
     async start(){
       this.stop();
+      if(!this.allowed()){this.report('Resume Stage 4 before enabling the microphone.');return;}
       const token=++this.serial;this.pending=true;this.mode='permission';this.report('Allow microphone access to start the check.');
-      let context,stream;
+      let context,stream,resumeTimer;
       try{
         if(!root.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('unsupported');
         context=new (root.AudioContext||root.webkitAudioContext)();this.context=context;
-        await context.resume();
-        if(token!==this.serial||!this.allowed()){await context.close().catch(()=>{});return;}
+        // Start permission from the tap, without waiting for audio activation first.
+        const resumed=context.resume().catch(error=>error);
         try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch{}
         stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false},video:false});
-        if(token!==this.serial||!this.allowed()){stream.getTracks().forEach(t=>t.stop());await context.close().catch(()=>{});return;}
+        if(token!==this.serial||!this.allowed()){stream.getTracks().forEach(t=>t.stop());await context.close().catch(()=>{});if(token===this.serial)this.stop();return;}
+        this.stream=stream; // Stop/pagehide must release tracks even while audio activation is pending.
+        const resumeError=await Promise.race([resumed,new Promise((_,reject)=>{resumeTimer=setTimeout(()=>reject(new Error('audio-start')),4000);})]);
+        clearTimeout(resumeTimer);
+        if(resumeError)throw resumeError;
+        if(token!==this.serial||!this.allowed()){stream.getTracks().forEach(t=>t.stop());await context.close().catch(()=>{});if(token===this.serial)this.stop();return;}
         this.stream=stream;this.pending=false;this.mode='calibrating';
         const source=context.createMediaStreamSource(stream),analyser=context.createAnalyser();
         analyser.fftSize=4096;source.connect(analyser); // Deliberately never connected to speakers.
@@ -65,12 +71,14 @@
           }
         },80);
       }catch(error){
+        clearTimeout(resumeTimer);
         if(stream)stream.getTracks().forEach(t=>t.stop());
         if(context&&context.state!=='closed')context.close().catch(()=>{});
         if(token!==this.serial)return;
         this.stop();
         const text=error.name==='NotAllowedError'?'Microphone access was not allowed. Enable it in your browser’s website settings, then try again.':error.name==='NotFoundError'?'No microphone was found. Connect one, or use listening practice.':error.name==='NotReadableError'?'The microphone is busy. Close other apps using it, then try again.':error.message==='unsupported'?'Microphone access needs a supported browser on HTTPS. Open the game in Safari or Chrome.':'Could not start the microphone. Try again, or use listening practice.';
         this.report(text);
+        this.onError({code:error.message==='unsupported'?'unsupported':error.name||'unknown'});
       }
     }
     setListening(value){

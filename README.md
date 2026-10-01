@@ -198,3 +198,9 @@ game and stops microphone capture. Players can replay any unlocked stage; locked
 stages show their prerequisite, and the current stage is marked. Closing the
 menu restores the previous pause state. Switching starts a fresh attempt while
 preserving saved best scores and unlocks on that device.
+
+Microphone setup requests browser permission directly from the Enable microphone
+tap. If access is denied, a recovery dialog offers device-specific Safari/Chrome
+steps, a retry button, and listening-only practice. Voice settings also contains
+Microphone help. The site does not claim to open phone settings or grant itself
+permission, and it never automatically retries capture after returning from settings.

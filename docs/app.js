@@ -252,6 +252,7 @@ function updateMemory(state) {
 let latestVoiceState=null, voiceMessage='', voiceAttempt=null;
 const voiceInput=new GroveVoice.VoiceInput({
   send:(name,value)=>command(name,value),
+  onError:({code})=>showMicrophoneHelp(code),
   report:text=>{voiceMessage=text;$('voice-feedback').textContent=text;$('voice-enable').disabled=voiceInput.pending||voiceInput.mode==='calibrating';$('voice-enable').textContent=voiceInput.pending?'Waiting for permission…':voiceInput.mode==='calibrating'?'Checking microphone…':voiceInput.stream?'Turn mic off':'Enable microphone';},
   allowed:()=>activeLesson?.stage===4&&!paused&&!$('game-screen').hidden&&!document.hidden&&activeLesson.phase!=='complete'&&!latestVoiceState?.voice?.practice
 });
@@ -287,6 +288,46 @@ function updateVoice(state){
   $('voice-level').setAttribute('aria-valuetext',!pitch.active?'Waiting for your note':pitch.reference?`Reference ${v.target_name}, ${Math.round(pitch.hz)} Hz`:pitch.matched?'Matching the target note':pitch.error<0?'Pitch too low':'Pitch too high');
   $('view-label').textContent=v.practice?'LISTENING PRACTICE':'SING YOUR WAY UP';
 }
+const micHelpGuides={
+ iphone:{steps:[
+  'In Safari, tap the page menu beside the address bar, then Website Settings.',
+  'For this website, set Microphone to Ask or Allow. If the option is missing, check iPhone Settings → Apps → Safari → Microphone and choose Ask.',
+  'Return to the game and tap Try microphone again. Choose Allow if your phone asks.'
+ ],url:'https://support.apple.com/guide/iphone/browse-the-web-privately-iphb01fc3c85/ios'},
+ android:{steps:[
+  'In Chrome, open the ⋮ menu → Settings → Site settings → Microphone.',
+  'Allow sites to ask. If this website is listed as blocked, select it and allow access.',
+  'If Android also blocks Chrome, open phone Settings → Apps → Chrome → Permissions → Microphone and allow it while using the app.',
+  'Return here, tap Try microphone again, and allow access when asked.'
+ ],url:'https://support.google.com/chrome/answer/2693767?co=GENIE.Platform%3DAndroid&hl=en'},
+ other:{steps:[
+  'Open the permissions or website settings menu beside your browser’s address bar.',
+  'Allow microphone access for this website. Also check that your device allows your browser to use the microphone.',
+  'Return here and tap Try microphone again. If you opened the game inside another app, open the link in Safari or Chrome instead.'
+ ],url:'https://support.google.com/chrome/answer/2693767?co=GENIE.Platform%3DDesktop&hl=en'}
+};
+function renderMicrophoneHelp(){
+ const kind=$('mic-help-device').value,guide=micHelpGuides[kind];
+ $('mic-help-steps').replaceChildren(...guide.steps.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
+ $('mic-help-source').href=guide.url;
+ const standalone=navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+ $('mic-help-context').textContent=kind==='iphone'&&standalone?'Opened from your Home Screen? If access still fails, open this game link in Safari and follow the steps above. Browser and Home Screen permissions and saved progress may differ.':'The game cannot open your phone settings automatically. After changing access, return here to retry. If needed, reload the game; your saved best scores stay on this device.';
+}
+function showMicrophoneHelp(code='help'){
+ if(activeLesson?.stage!==4||$('game-screen').hidden)return;
+ voiceInput.stop();
+ const iphone=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ $('mic-help-device').value=iphone?'iphone':/Android/i.test(navigator.userAgent)?'android':'other';
+ $('mic-help-reason').textContent=code==='NotAllowedError'?'Access was blocked or the permission prompt was dismissed. Use these steps to allow it.':code==='NotFoundError'?'No microphone was found. Connect one, or choose listening practice below.':code==='NotReadableError'?'Another app may be using your microphone. Close calls or recording apps, then retry.':code==='unsupported'?'Open the secure game link in Safari or Chrome to use your microphone.':'Tap Enable microphone and allow access when asked. If a prompt does not appear, check these settings.';
+ renderMicrophoneHelp();
+ if(!$('mic-help-dialog').open)$('mic-help-dialog').showModal();
+ $('mic-help-retry').focus({preventScroll:true});
+}
+$('mic-help-device').onchange=renderMicrophoneHelp;
+$('voice-help').onclick=()=>showMicrophoneHelp();
+$('mic-help-close').onclick=()=> $('mic-help-dialog').close();
+$('mic-help-retry').onclick=()=>{$('mic-help-dialog').close();voiceMessage='';voiceInput.start();};
+$('mic-help-practice').onclick=()=>{$('mic-help-dialog').close();voiceInput.stop();command('practice');};
 $('voice-enable').onclick=()=>{voiceMessage='';if(voiceInput.stream)voiceInput.stop();else voiceInput.start();};
 $('voice-listen').onclick=()=>{voiceMessage='';voiceInput.setListening(false);command('listen');};
 $('voice-next').onclick=()=>command('practice_next');

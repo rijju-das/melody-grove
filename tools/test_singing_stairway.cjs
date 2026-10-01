@@ -8,6 +8,17 @@ const assert=require('node:assert/strict');
  page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  const wait=(fn,arg)=>page.waitForFunction(fn,arg,{timeout:30000});
  const state=()=>page.evaluate(()=>window.testState);
+ const referenceFrame=async()=>{
+  const handle=await page.waitForFunction(()=>{
+   const pitch=window.testState?.voice.pitch_meter;
+   if(!pitch?.reference)return false;
+   const mic=document.getElementById('voice-level'),jump=document.getElementById('voice-hold');
+   const a=mic.getBoundingClientRect(),b=jump.getBoundingClientRect();
+   if(Math.abs(a.height-Math.max(8,120*pitch.value))>0.5)return false;
+   return {height:a.height,bottom:a.bottom,jumpHeight:b.height,jumpBottom:b.bottom,value:mic.value,pitch:pitch.value,hold:window.testState.voice.hold};
+  },null,{timeout:30000});
+  const snapshot=await handle.jsonValue();await handle.dispose();return snapshot;
+ };
  const shot=name=>page.screenshot({path:`/Users/rijju/Documents/Blender_2026/godot-diagnostics/singing-${name}.png`,fullPage:true});
  try{
   await page.goto('http://127.0.0.1:4321/');
@@ -42,8 +53,9 @@ const assert=require('node:assert/strict');
   await shot('ready-phone');
   await page.locator('#voice-enable').tap();await page.getByText(/Microphone access was not allowed/).waitFor();
   assert.equal((await state()).lesson.score,0);
+  assert(await page.locator('#mic-help-dialog').isVisible());
   await page.evaluate(()=>window.denyMic=false);
-  await page.locator('#voice-enable').tap();await wait(()=>window.testState.voice.enabled);
+  await page.locator('#mic-help-retry').tap();await wait(()=>window.testState.voice.enabled);
   await page.locator('#voice-listen').tap();await wait(()=>window.testState.voice.pitch_meter.reference);
    assert(await page.locator('#voice-level').evaluate(el=>el.value>0));
    assert.equal((await state()).voice.hold,0);
@@ -62,16 +74,14 @@ const assert=require('node:assert/strict');
   const referenceHeights=[],physicalHeights=[];
   for(let step=0;step<5;step++){
    if(step>0||((await state()).lesson.phase!=='answer')){
-    await page.locator('#voice-listen').tap();await wait(()=>window.testState.voice.pitch_meter.reference);
-   assert(await page.locator('#voice-level').evaluate(el=>el.value>0));
-   assert.equal((await state()).voice.hold,0);
-   referenceHeights.push((await state()).voice.pitch_meter.value);
-   await page.waitForTimeout(120);
-   const micBox=await page.locator('#voice-level').boundingBox(),jumpBox=await page.locator('#voice-hold').boundingBox();
-   physicalHeights.push(micBox.height);
-   assert(Math.abs(micBox.y+micBox.height-jumpBox.y-jumpBox.height)<1);
-   assert.equal(jumpBox.height,120);
-   assert.equal(await page.locator('#voice-level').evaluate(el=>el.value),1,'Active microphone bar is solid, with no empty track');
+    await page.locator('#voice-listen').tap();
+   const frame=await referenceFrame();
+   assert.equal(frame.hold,0);
+   referenceHeights.push(frame.pitch);
+   physicalHeights.push(frame.height);
+   assert(Math.abs(frame.bottom-frame.jumpBottom)<1);
+   assert.equal(frame.jumpHeight,120);
+   assert.equal(frame.value,1,'Active microphone bar is solid, with no empty track');
    if(step===2)await shot('reference-mi');
    await wait(()=>window.testState.lesson.phase==='answer');
    }
