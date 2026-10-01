@@ -85,3 +85,17 @@
 #voice-level.reference::-moz-progress-bar{background:#61aed0}
 
 @media(prefers-reduced-motion:reduce){#voice-level{transition:none}}
+
+#stage-picker{max-width:460px;max-height:calc(100dvh - 24px);overflow-y:auto;padding:24px}
+#stage-picker h2{font:30px Georgia,serif;margin:10px 0}
+#stage-picker .eyebrow{padding-right:34px;font-size:9px}
+#stage-picker-note{font-size:12px;line-height:1.5;margin:0 0 16px;color:#547156}
+#stage-picker-list{display:grid;gap:8px;margin-bottom:16px}
+#stage-picker-list button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;padding:12px 14px;min-height:62px;background:#edf0df}
+#stage-picker-list strong{font-size:14px}
+#stage-picker-list span{font-size:11px;font-weight:400}
+#stage-picker-list button:disabled{cursor:default;opacity:.55}
+#stage-picker-list button[aria-current]{opacity:1;border-color:#6e956b;background:#e0e9cf}
+#return-stage{width:100%;min-height:44px}
+@media(orientation:landscape) and (max-height:600px){#stage-picker{max-width:630px;padding:16px 22px}#stage-picker h2{font-size:24px;margin:5px 0}#stage-picker .eyebrow{margin:0}#stage-picker-list{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}#stage-picker-note{margin-bottom:10px}}
+@media(max-width:700px) and (orientation:portrait){.compact-game .secondary-controls{grid-column:1/-1;grid-row:3;justify-content:flex-end}.compact-game .note-heading{grid-column:1/-1}.singing-game #voice-controls{grid-row:4}}

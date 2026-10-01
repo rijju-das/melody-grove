@@ -192,3 +192,9 @@ at the target note's height. Hold to jump keeps its fixed height. During singing
 match. Octave-equivalent notes still score, but their actual heights differ.
 Loudness does not control this meter. Microphone enable, Listen and voice settings
 remain in the bottom panel. Hold a match for 0.55 seconds to jump.
+
+The in-game Stages button on web and phone opens a stage picker. It pauses the
+game and stops microphone capture. Players can replay any unlocked stage; locked
+stages show their prerequisite, and the current stage is marked. Closing the
+menu restores the previous pause state. Switching starts a fresh attempt while
+preserving saved best scores and unlocks on that device.

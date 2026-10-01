@@ -322,6 +322,7 @@ window.groveState = state => {
   $('note-action').disabled=locked||state.hopping||state.step===0||(lesson.stage>1&&lesson.phase!=='answer');
   $('listen').disabled=locked||state.hopping||state.recovering;
   $('pause').disabled=lesson.phase==='complete'&&!state.transitioning;
+  $('open-stages').disabled=!gameStarted||!!state.transitioning||lesson.phase==='complete';
   $('camera-mode').disabled=!!state.transitioning;
   document.querySelector('[data-command="restart"]').disabled=!!state.transitioning;
   if(lesson.phase==='complete'&&!completedShown&&!state.transitioning) {
@@ -355,6 +356,44 @@ function command(name,value) {if(['stage','restart','advance','pause'].includes(
 document.querySelectorAll('[data-command]').forEach(button=>button.onclick=()=>command(button.dataset.command));
 $('volume').oninput=event=>command('volume',Number(event.target.value));
 function home() {voiceInput.stop();if(gameStarted&&!paused)command('pause');command('stop_celebration');clearRewards();$('complete-dialog').close();$('game-screen').hidden=true;$('welcome').hidden=false;updateStageMenu();window.scrollTo(0,0);}
+let resumeAfterStageMenu=false;
+const stageTitles=['Find the notes','Echo meadow','Canopy concert','Singing stairway'];
+function openStagePicker(){
+  if(!gameStarted||!activeLesson||$('open-stages').disabled||$('stage-picker').open)return;
+  resumeAfterStageMenu=!paused;
+  voiceInput.stop();
+  if(resumeAfterStageMenu)command('pause');
+  const choices=stageTitles.map((title,index)=>{
+    const number=index+1,record=activeLesson.records?.[index];
+    const locked=number>activeLesson.unlocked,current=number===activeLesson.stage;
+    const button=document.createElement('button');
+    button.type='button';button.dataset.jumpStage=number;button.disabled=locked||current;
+    if(current)button.setAttribute('aria-current','step');
+    const heading=document.createElement('strong');heading.textContent=`${number} · ${title}`;
+    const detail=document.createElement('span');detail.textContent=current?'You are here':locked?`Finish stage ${number-1} to unlock`:record?.complete?`Replay · Best ${record.score} points`:'Play stage';
+    button.append(heading,detail);
+    button.onclick=()=>{
+      if(number>activeLesson.unlocked)return;
+      resumeAfterStageMenu=false;
+      $('stage-picker').close();
+      clearRewards();
+      command('stage',number);
+      $('canvas').focus({preventScroll:true});
+    };
+    return button;
+  });
+  $('stage-picker-list').replaceChildren(...choices);
+  $('stage-picker').showModal();
+  $('return-stage').focus({preventScroll:true});
+}
+$('open-stages').onclick=openStagePicker;
+$('close-stages').onclick=()=> $('stage-picker').close();
+$('return-stage').onclick=()=> $('stage-picker').close();
+$('stage-picker').addEventListener('close',()=>{
+  if(resumeAfterStageMenu&&!$('game-screen').hidden)command('pause');
+  resumeAfterStageMenu=false;
+  $('open-stages').focus({preventScroll:true});
+});
 $('home').onclick=home;
 $('journey-home').onclick=home;
 $('complete-dialog').addEventListener('cancel',event=>event.preventDefault());
