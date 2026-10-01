@@ -79,6 +79,18 @@ var native_listen: Button
 var native_panel: PanelContainer
 var native_settings: VBoxContainer
 var native_settings_open := false
+var stairway: Node3D
+var singing: Node
+var native_voice_row: HBoxContainer
+var native_voice_panel: PanelContainer
+var native_voice_target: Label
+var native_voice_listen: Button
+var native_voice_enable: Button
+var native_voice_next: Button
+var native_voice_options: VBoxContainer
+var native_voice_meters: HBoxContainer
+var native_voice_level: ProgressBar
+var native_voice_hold: ProgressBar
 
 func _ready() -> void:
 	_bind_keys()
@@ -113,6 +125,13 @@ func _ready() -> void:
 	canopy = preload("res://canopy_concert.gd").new()
 	stage_path.sections[2].add_child(canopy)
 	canopy.setup(stage_path.sections[2], stage_path.entry(3))
+	stairway = preload("res://singing_stairway.gd").new()
+	stage_path.sections[3].add_child(stairway)
+	stairway.setup_stairway(stage_path.sections[3], canopy.arenas[2].center + Vector3(18, 0, 0), canopy.arenas[2].center + Vector3(6.6, 0, 2.3))
+	canopy.arenas[2]._path(canopy.arenas[2].center, canopy.arenas[2].center + Vector3(6.6, 0, 2.3))
+	singing = preload("res://singing_lesson.gd").new()
+	add_child(singing)
+	singing.setup(self)
 	audio = AudioStreamPlayer.new()
 	audio.name = "NoteAudio"
 	audio.volume_db = -8.0
@@ -137,7 +156,14 @@ func _ready() -> void:
 func _web_command(arguments: Array) -> void:
 	if arguments.is_empty():
 		return
-	match str(arguments[0]):
+	var action := str(arguments[0])
+	if action in ["mic_on", "mic_off", "voice_level", "voice_range", "practice", "practice_next"]:
+		singing.command(action, arguments[1] if arguments.size() > 1 else null)
+		return
+	if action == "pitch":
+		if arguments.size() > 1 and lesson.stage == 4: singing.sample(float(arguments[1]))
+		return
+	match action:
 		"next": request_step(1)
 		"back": request_step(-1)
 		"repeat": repeat_note()
@@ -205,23 +231,45 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if OS.has_feature("web") and status:
-		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok, "attempt": attempt_id, "reward": last_reward, "overview": camera.overview, "camera_wide": camera.is_overview(), "transitioning": transitioning, "memory_marks": memory_marks, "recovering": memory_return_delay > 0, "targets": _memory_targets(), "glade_target": _glade_target(), "clearing": canopy_index + 1, "guided": concert_hint, "concert_moving": concert_moving})
+		var state := JSON.stringify({"text": status.text, "paused": paused, "step": route_index, "hopping": hopping, "lesson": lesson.snapshot(), "saved": saved_ok, "attempt": attempt_id, "reward": last_reward, "overview": camera.overview, "camera_wide": camera.is_overview(), "transitioning": transitioning, "memory_marks": memory_marks, "recovering": memory_return_delay > 0, "targets": _memory_targets(), "glade_target": _glade_target(), "clearing": canopy_index + 1, "guided": concert_hint, "concert_moving": concert_moving, "voice": singing.snapshot() if lesson.stage == 4 else {}})
 		if state != web_last_state:
 			web_last_state = state
 			JavaScriptBridge.eval("window.groveState && window.groveState(" + state + ")")
 	if native_glade:
-		native_glade.visible = lesson.stage >= 2 and not transitioning and lesson.phase != "complete"
+		native_glade.visible = lesson.stage in [2, 3] and not transitioning and lesson.phase != "complete"
 		native_glade.disabled = paused or hopping or memory_return_delay > 0 or lesson.phase in ["listening", "complete"]
 		native_glade.text = "♪ Listening…" if lesson.phase == "listening" else ("Listen again\n↓" if lesson.phase == "answer" else "Tap to listen\n↓")
 		native_glade.position = camera.unproject_position(active_arena().center) - Vector2(80, 95)
 	if native_hint_button:
 		native_hint_button.visible = lesson.stage == 3
 		native_hint_button.disabled = paused or hopping or transitioning or memory_return_delay > 0 or lesson.phase not in ["ready", "answer"]
+	if native_voice_panel:
+		native_voice_panel.visible = lesson.stage == 4 and not transitioning
+		native_voice_row.visible = lesson.stage == 4 and not transitioning
+		native_voice_target.text = singing.target_name()
+		if lesson.stage != 4: native_voice_options.hide()
+		if lesson.stage == 4 and not transitioning:
+			status.text = "Paused · microphone off" if paused else singing.feedback
+		var pitch: Dictionary = singing.pitch_meter()
+		# Resize the whole bar from its fixed bottom, with no empty track above it.
+		native_voice_level.offset_top = -maxf(8, 142 * (pitch.value if pitch.active else pitch.target_height))
+		native_voice_level.value = 1.0 if pitch.active else 0.0
+		(native_voice_level.get_theme_stylebox("fill") as StyleBoxFlat).bg_color = Color("6ebddc") if pitch.reference else (Color("80d597") if pitch.matched else Color("e9bc67"))
+		native_voice_level.tooltip_text = singing.feedback
+		native_voice_hold.value = 1.0 if hopping else singing.held / singing.HOLD_SECONDS
+		native_voice_enable.text = "Turn mic off" if singing.enabled else "Enable microphone"
+		native_voice_enable.disabled = paused or hopping or singing.practice or lesson.phase in ["complete", "practice_complete"]
+		native_voice_listen.disabled = paused or hopping or lesson.phase not in ["ready", "answer"] or not (singing.enabled or singing.practice)
+		native_voice_next.visible = singing.practice
+		native_voice_next.disabled = paused or hopping or lesson.phase != "answer"
 	if player == null or paused:
 		return
 	if transitioning:
 		if concert_moving: _walk_concert(delta)
 		else: _walk_to_next_stage(delta)
+		return
+	if lesson.stage == 4:
+		singing.tick(delta)
 		return
 	if lesson.stage == 2: memory_arena.tick(delta)
 	if lesson.stage == 3: canopy.tick(delta)
@@ -280,7 +328,9 @@ func _process_hop(delta: float) -> void:
 		hopping = false
 		cooldown = 0.16
 		_rest_limbs()
-		if lesson.stage >= 2:
+		if lesson.stage == 4:
+			singing.landed()
+		elif lesson.stage >= 2:
 			if route_index > 0: choose_note(true)
 			else:
 				halo.hide()
@@ -332,7 +382,7 @@ func _start_note_hop(target: int) -> void:
 	if facing.length() > 0.01: player.rotation.y = atan2(facing.x, facing.z)
 
 func _glade_target() -> Array:
-	if lesson.stage < 2 or transitioning: return []
+	if lesson.stage not in [2, 3] or transitioning: return []
 	var viewport_size := get_viewport().get_visible_rect().size
 	var point := camera.unproject_position(active_arena().center)
 	var edge := camera.unproject_position(active_arena().center + camera.global_basis.x * 1.25)
@@ -392,6 +442,9 @@ func reset_player() -> void:
 		pause_button.text = "Pause · P"
 
 func repeat_note() -> void:
+	if lesson.stage == 4:
+		singing.listen()
+		return
 	if paused or hopping or lesson.phase in ["listening", "complete"]:
 		return
 	if route_index == 0:
@@ -402,6 +455,7 @@ func repeat_note() -> void:
 func toggle_pause() -> void:
 	if lesson.phase == "complete" and not transitioning: return
 	paused = not paused
+	if paused and lesson.stage == 4: singing.command("mic_off")
 	queued_direction = 0
 	audio.stream_paused = paused
 	pause_button.text = "Resume · P" if paused else "Pause · P"
@@ -423,7 +477,7 @@ func _rest_limbs() -> void:
 		limbs[i].rotation = limb_rest[i]
 
 func active_arena() -> Node3D:
-	return canopy.arenas[canopy_index] if lesson.stage == 3 else memory_arena
+	return stairway if lesson.stage == 4 else (canopy.arenas[canopy_index] if lesson.stage == 3 else memory_arena)
 
 func _reveal_demo_note() -> bool:
 	return lesson.stage != 3 or lesson.phase != "listening" or concert_hint or canopy_index == 0 or (canopy_index == 1 and demo_index == 0)
@@ -446,6 +500,9 @@ func _play_note(index: int) -> void:
 
 func start_stage(number: int, arriving := false) -> void:
 	if not lesson.begin(number): return
+	singing.reset()
+	stairway.reset()
+	audio.pitch_scale = 1
 	transitioning = false
 	concert_moving = false
 	concert_hint = false
@@ -456,7 +513,7 @@ func start_stage(number: int, arriving := false) -> void:
 	route.clear()
 	route.append(active_arena().center if number >= 2 else stage_path.entry(number))
 	var section: Node3D = stage_path.sections[number - 1]
-	for i in range(8):
+	for i in range(5 if number == 4 else 8):
 		var pad := active_arena().pads[i] as Node3D if number >= 2 else section.find_child("MS_Pad_%d" % i, true, false) as Node3D
 		pads.append(pad)
 		route.append(pad.global_position + FOOT_OFFSET)
@@ -481,10 +538,11 @@ func start_stage(number: int, arriving := false) -> void:
 	status.text = "Tap a platform to jump and collect its gem · 10 points each" if number == 1 else "Tap Listen, remember the melody, then choose its notes."
 	if number == 2: status.text = "Tap the centre glade. Watch, then jump to repeat the melody."
 	if number == 3: status.text = _concert_prompt()
+	if number == 4: status.text = "Listen, sing, and climb · five notes to the treetop"
 	_update_lesson_hud()
 
 func advance_stage() -> void:
-	if transitioning or lesson.phase != "complete" or lesson.stage >= 3: return
+	if transitioning or lesson.phase != "complete" or lesson.stage >= 4: return
 	next_stage = lesson.stage + 1
 	stage_path.prepare_passage(lesson.stage)
 	success_overlay.hide()
@@ -495,13 +553,17 @@ func advance_stage() -> void:
 	paused = false
 	travel_points.clear()
 	# Finish walking the current branch before crossing the connecting bridge.
-	if lesson.stage == 2:
+	if lesson.stage == 3:
+		travel_points.append(canopy.arenas[2].center)
+		travel_points.append(canopy.arenas[2].center + Vector3(6.6, 0, 2.3))
+		travel_points.append(stairway.center)
+	elif lesson.stage == 2:
 		travel_points.append(memory_arena.center)
 		travel_points.append(memory_arena.exit_waypoint)
 		travel_points.append(memory_arena.exit_point)
 	else:
 		for i in range(route_index + 1, route.size()): travel_points.append(route[i])
-	travel_points.append(stage_path.entry(next_stage))
+	if next_stage != 4: travel_points.append(stage_path.entry(next_stage))
 	if next_stage == 2: travel_points.append(memory_arena.center)
 	if next_stage == 3:
 		travel_points.append(canopy.arenas[0].center + Vector3(-6.6, 0, 2.3))
@@ -574,6 +636,9 @@ func _walk_concert(delta: float) -> void:
 	_update_lesson_hud()
 
 func listen_melody(with_hint := false) -> void:
+	if lesson.stage == 4:
+		singing.listen()
+		return
 	if paused or hopping or transitioning or memory_return_delay > 0 or not lesson.listen(): return
 	concert_hint = with_hint and lesson.stage == 3
 	queued_direction = 0
@@ -587,6 +652,7 @@ func listen_melody(with_hint := false) -> void:
 		_update_lesson_hud()
 
 func choose_note(from_landing := false) -> void:
+	if lesson.stage == 4: return
 	if lesson.stage >= 2 and not from_landing: return
 	if paused or hopping or route_index == 0: return
 	var previous_score: int = lesson.score
@@ -648,8 +714,8 @@ func celebrate() -> void:
 func _show_success() -> void:
 	success_heading.text = "HURRAY!\nStage %d complete!" % lesson.stage
 	success_stars.text = "★ ".repeat(lesson.stars) + "☆ ".repeat(3 - lesson.stars)
-	success_summary.text = "Well done! You earned %d points.\n%s" % [lesson.score, "Stage %d is unlocked!" % (lesson.stage + 1) if lesson.stage < 3 else "You completed the whole musical journey!"]
-	next_stage_button.text = "Next stage  →" if lesson.stage < 3 else "Play again  →"
+	success_summary.text = "Well done! You earned %d points.\n%s" % [lesson.score, "Stage %d is unlocked!" % (lesson.stage + 1) if lesson.stage < 4 else "You completed the whole musical journey!"]
+	next_stage_button.text = "Next stage  →" if lesson.stage < 4 else "Play again  →"
 	success_overlay.show()
 
 func _load_progress() -> void:
@@ -679,18 +745,27 @@ func _update_lesson_hud() -> void:
 		native_listen.visible = false
 		lesson_label.visible = false
 		native_markers.visible = lesson.stage >= 2
-		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat((4 if lesson.stage == 3 else 3) - memory_marks)
+		native_markers.text = "● ".repeat(memory_marks) + "○ ".repeat((5 if lesson.stage == 4 else (4 if lesson.stage == 3 else 3)) - memory_marks)
 		native_step_row.visible = lesson.stage == 1
 		native_choose_button.visible = false
-		native_panel.offset_top = -(126 if lesson.stage == 1 else 162) - (190 if native_settings_open else 0)
+		_fit_native_panel.call_deferred()
 		native_panel.offset_bottom = -16
 		native_hint.text = "Click a platform / 1–8: jump · L: listen · R: retry · P: pause" if lesson.stage >= 2 else "Tap platforms or use arrows / WASD to hop · Space: hear note · R: retry"
+	if lesson.stage == 4 and native_hint: native_hint.text = "Listen first, then hold a gentle hummm · lower and higher octaves count"
 	if reward_counter:
 		reward_counter.text = "%d  POINTS" % lesson.score
 		gem_counter.text = "◆  %d / 8 GEMS" % lesson.collected.size() if lesson.stage == 1 else "♪  %d / 3 MELODIES" % mini(lesson.round_index, 3)
+	if lesson.stage == 4 and gem_counter:
+		gem_counter.text = "♪  %d / 5 STEPS" % lesson.round_index
 	if lesson_label:
 		lesson_label.text = "Stage %d: %s · %d points · Best total: %d" % [lesson.stage, lesson.TITLES[lesson.stage-1], lesson.score, lesson.total()]
 	for i in range(stage_buttons.size()): stage_buttons[i].disabled = i + 1 > lesson.unlocked()
+
+func _fit_native_panel() -> void:
+	if not is_instance_valid(native_panel): return
+	# Keep the bottom edge fixed when extra rows change the minimum height.
+	native_panel.offset_bottom = -16
+	native_panel.offset_top = -16 - maxf(110, native_panel.get_combined_minimum_size().y)
 
 func _make_collectibles() -> void:
 	var material := StandardMaterial3D.new()
@@ -819,6 +894,8 @@ func _make_hud() -> void:
 	panel.offset_right = -22
 	panel.offset_top = -230
 	panel.offset_bottom = -16
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.minimum_size_changed.connect(func(): _fit_native_panel.call_deferred())
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.18, 0.20, 0.96)
 	style.set_corner_radius_all(16)
@@ -838,7 +915,7 @@ func _make_hud() -> void:
 	native_stages = stages
 	stages.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_child(stages)
-	for i in range(3): stage_buttons.append(_button(stages, "Stage %d" % (i+1), start_stage.bind(i+1)))
+	for i in range(4): stage_buttons.append(_button(stages, "Stage %d" % (i+1), start_stage.bind(i+1)))
 	status = Label.new()
 	status.add_theme_font_size_override("font_size", 24)
 	status.add_theme_color_override("font_color", Color("fff0ce"))
@@ -906,6 +983,87 @@ func _make_hud() -> void:
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			native_glade.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		native_glade.pressed.connect(listen_melody)
+	# Stage 4 has its own right-side coach, separate from the compact bottom HUD.
+	native_voice_panel = PanelContainer.new()
+	layer.add_child(native_voice_panel)
+	native_voice_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	native_voice_panel.offset_left = -218
+	native_voice_panel.offset_right = -22
+	native_voice_panel.offset_top = 100
+	native_voice_panel.offset_bottom = 338
+	var voice_style := style.duplicate() as StyleBoxFlat
+	voice_style.border_color = Color("f1d589")
+	voice_style.set_border_width_all(2)
+	native_voice_panel.add_theme_stylebox_override("panel", voice_style)
+	var voice_box := VBoxContainer.new()
+	voice_box.add_theme_constant_override("separation", 8)
+	native_voice_panel.add_child(voice_box)
+	native_voice_target = Label.new()
+	native_voice_target.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	native_voice_target.add_theme_font_size_override("font_size", 20)
+	voice_box.add_child(native_voice_target)
+	native_voice_meters = HBoxContainer.new()
+	native_voice_meters.alignment = BoxContainer.ALIGNMENT_CENTER
+	native_voice_meters.add_theme_constant_override("separation", 18)
+	voice_box.add_child(native_voice_meters)
+	for title in ["Microphone", "Hold to jump"]:
+		var column := VBoxContainer.new()
+		native_voice_meters.add_child(column)
+		var meter := ProgressBar.new()
+		meter.max_value = 1.0
+		meter.step = 0.001
+		meter.show_percentage = false
+		meter.custom_minimum_size = Vector2(28, 142)
+		meter.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		meter.fill_mode = ProgressBar.FILL_BOTTOM_TO_TOP
+		if title == "Microphone":
+			var pitch_space := Control.new()
+			pitch_space.custom_minimum_size = Vector2(28, 142)
+			pitch_space.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			column.add_child(pitch_space)
+			pitch_space.add_child(meter)
+			meter.custom_minimum_size = Vector2(28, 0)
+			meter.anchor_top = 1
+			meter.anchor_bottom = 1
+			meter.offset_right = 28
+			meter.offset_top = -71
+		else:
+			column.add_child(meter)
+		var label := Label.new()
+		label.text = "Mic pitch" if title == "Microphone" else "Hold to\njump"
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", 14)
+		column.add_child(label)
+		if title == "Microphone":
+			native_voice_level = meter
+			var fill := StyleBoxFlat.new()
+			fill.bg_color = Color("e9bc67")
+			fill.set_corner_radius_all(5)
+			meter.add_theme_stylebox_override("fill", fill)
+		else: native_voice_hold = meter
+	native_voice_row = HBoxContainer.new()
+	native_voice_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(native_voice_row)
+	native_voice_enable = _button(native_voice_row, "Enable microphone", func(): singing.command("mic_off" if singing.enabled else "mic_native"))
+	native_voice_listen = _button(native_voice_row, "♪ Listen", func(): singing.listen())
+	native_voice_next = _button(native_voice_row, "Next step", func(): singing.command("practice_next"))
+	var voice_options := VBoxContainer.new()
+	native_voice_options = voice_options
+	voice_options.hide()
+	_button(native_voice_row, "Voice settings", func(): voice_options.visible = not voice_options.visible)
+	box.add_child(voice_options)
+	voice_options.visibility_changed.connect(func(): _fit_native_panel.call_deferred())
+	box.move_child(native_settings, box.get_child_count() - 1)
+	_button(voice_options, "Lower / higher voice", func(): singing.command("voice_range", -1 if singing.octave == 0 else 0))
+	_button(voice_options, "Listening practice", func(): singing.command("practice"))
+	native_voice_row.add_theme_constant_override("separation", 8)
+	native_voice_enable.custom_minimum_size = Vector2(0, 44)
+	native_voice_enable.add_theme_color_override("font_color", Color("173e35"))
+	var mic_style := StyleBoxFlat.new()
+	mic_style.bg_color = Color("f1d589")
+	mic_style.set_corner_radius_all(12)
+	mic_style.set_content_margin_all(10)
+	native_voice_enable.add_theme_stylebox_override("normal", mic_style)
 	_make_success_overlay(layer)
 
 func _make_success_overlay(layer: CanvasLayer) -> void:
@@ -944,7 +1102,7 @@ func _make_success_overlay(layer: CanvasLayer) -> void:
 	success_stars.add_theme_color_override("font_color", Color("c88a18"))
 	success_summary.add_theme_font_size_override("font_size", 24)
 	next_stage_button = _button(box, "Next stage →", func():
-		if lesson.stage < 3: advance_stage()
+		if lesson.stage < 4: advance_stage()
 		else: start_stage(1))
 	next_stage_button.custom_minimum_size.y = 72
 	next_stage_button.add_theme_font_size_override("font_size", 30)

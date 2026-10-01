@@ -1,8 +1,8 @@
 extends RefCounted
 ## Deterministic lesson rules, independent of rendering and audio.
-const TITLES := ["Find the notes", "Echo meadow", "Canopy concert"]
-const MELODIES := [[], [[0, 2, 4], [4, 2, 0], [0, 1, 2]], [[0, 2, 4, 2], [2, 3, 4, 7], [7, 4, 2, 0]]]
-const MAX_SCORES := [80, 120, 150]
+const TITLES := ["Find the notes", "Echo meadow", "Canopy concert", "Singing stairway"]
+const MELODIES := [[], [[0, 2, 4], [4, 2, 0], [0, 1, 2]], [[0, 2, 4, 2], [2, 3, 4, 7], [7, 4, 2, 0]], [[0], [1], [2], [1], [0]]]
+const MAX_SCORES := [80, 120, 150, 100]
 var records: Array = []
 var stage := 1
 var phase := "explore"
@@ -14,13 +14,13 @@ var collected: Array = []
 var stars := 0
 
 func _init() -> void:
-	for i in range(3): records.append({"complete": false, "score": 0, "stars": 0})
+	for i in range(4): records.append({"complete": false, "score": 0, "stars": 0})
 	begin(1)
 
 func unlocked() -> int:
-	for i in range(2):
+	for i in range(3):
 		if not records[i].complete: return i + 1
-	return 3
+	return 4
 
 func begin(number: int) -> bool:
 	if number < 1 or number > unlocked(): return false
@@ -35,7 +35,7 @@ func begin(number: int) -> bool:
 	return true
 
 func melody() -> Array:
-	if stage == 1 or round_index >= 3: return []
+	if stage == 1 or round_index >= MELODIES[stage - 1].size(): return []
 	return MELODIES[stage - 1][round_index].duplicate()
 
 func explore(note: int) -> bool:
@@ -64,11 +64,11 @@ func submit(note: int) -> String:
 	answer_index += 1
 	if answer_index < target.size(): return "correct"
 	# Award each melody once, never each partial attempt.
-	score += target.size() * 10
+	score += 20 if stage == 4 else target.size() * 10
 	round_index += 1
 	answer_index = 0
-	if round_index == 3:
-		score += maxi(0, 30 - mistakes * 5)
+	if round_index == MELODIES[stage - 1].size():
+		if stage != 4: score += maxi(0, 30 - mistakes * 5)
 		_finish()
 		return "complete"
 	phase = "ready"
@@ -93,8 +93,8 @@ func progress() -> Dictionary:
 func restore(value: Variant) -> void:
 	if not value is Dictionary or value.get("version") != 1: return
 	var saved: Variant = value.get("records")
-	if not saved is Array or saved.size() != 3: return
-	for i in range(3):
+	if not saved is Array or saved.size() not in [3, 4]: return
+	for i in range(saved.size()):
 		var entry: Variant = saved[i]
 		if not entry is Dictionary or entry.get("complete") != true: break
 		if not (entry.get("score") is float or entry.get("score") is int): break
@@ -103,6 +103,6 @@ func restore(value: Variant) -> void:
 
 func snapshot() -> Dictionary:
 	return {"stage": stage, "title": TITLES[stage-1], "phase": phase, "score": score,
-		"mistakes": mistakes, "round": mini(round_index + 1, 3), "answer": answer_index,
+		"mistakes": mistakes, "round": mini(round_index + 1, 5 if stage == 4 else 3), "answer": answer_index,
 		"length": melody().size(), "collected": collected.size(), "stars": stars,
 		"unlocked": unlocked(), "records": records, "total": total()}

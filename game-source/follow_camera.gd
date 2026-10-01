@@ -31,6 +31,13 @@ func _update_camera(delta: float) -> void:
 	if controller.transitioning:
 		target = controller.travel_position + Vector3.UP * 0.9
 		target_size = maxf(14.5, 11.0 * aspect)
+	elif controller.lesson.stage == 4:
+		var index: int = controller.route_index
+		target = controller.route[index]
+		if controller.hopping:
+			target = target.lerp(controller.route[controller.destination], smoothstep(0, 1, controller.hop_elapsed / controller.HOP_SECONDS))
+		target += Vector3(0, 2.1, -1.0)
+		target_size = maxf(17.5, 12.0 * aspect)
 	elif controller.lesson.stage >= 2:
 		target = controller.active_arena().center + Vector3.UP * 0.7
 		target_size = maxf(16.8, 14.0 * aspect)
@@ -53,6 +60,6 @@ func _update_camera(delta: float) -> void:
 	var weight := 1.0 if not initialized else 1.0 - exp(-5.5 * delta)
 	focus = focus.lerp(target, weight)
 	size = lerpf(size, target_size, weight)
-	rotation.x = lerpf(rotation.x, -0.95 if controller.lesson.stage >= 2 and not controller.transitioning else -0.657394, weight)
+	rotation.x = lerpf(rotation.x, -0.95 if controller.lesson.stage in [2, 3] and not controller.transitioning else -0.657394, weight)
 	global_position = focus + global_basis.z * 30.0
 	initialized = true

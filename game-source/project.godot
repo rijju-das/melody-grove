@@ -16,6 +16,11 @@ run/max_fps.web=30
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[audio]
+
+driver/enable_input=true
+driver/enable_input.web=false
+
 [display]
 
 window/size/viewport_width=1440

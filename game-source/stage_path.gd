@@ -4,7 +4,7 @@ const OFFSET := Vector3(30, 0, -12)
 var sections: Array[Node3D] = []
 var bridges: Array[Node3D] = []
 var gates: Array = []
-var opened := [0.0, 0.0]
+var opened := [0.0, 0.0, 0.0]
 var exit_trees: Array = []
 var exit_tree_positions: Array = []
 
@@ -12,7 +12,7 @@ func setup(forest: Node3D, player: Node3D) -> void:
 	# Keep one player when the forest sections are duplicated or hidden.
 	player.reparent(self, true)
 	sections.append(forest)
-	for i in range(1, 3):
+	for i in range(1, 4):
 		# Copy the live static tree directly. Re-instantiating the imported scene
 		# after moving its player can mismatch overrides against child indices.
 		var section := forest.duplicate(0) as Node3D
@@ -23,7 +23,7 @@ func setup(forest: Node3D, player: Node3D) -> void:
 			var object := section.find_child(object_name, true, false) as Node3D
 			if object: object.hide()
 		sections.append(section)
-	for i in range(2):
+	for i in range(3):
 		var branches := sections[i].find_children("Grove_storybook tree 6*", "Node3D", true, false)
 		var positions: Array[Vector3] = []
 		for branch in branches: positions.append(branch.position)
@@ -33,8 +33,8 @@ func setup(forest: Node3D, player: Node3D) -> void:
 	show_stage(1)
 
 func show_stage(number: int) -> void:
-	for i in range(3): sections[i].visible = i == number - 1
-	for i in range(2): bridges[i].visible = i == number - 1 or i == number - 2
+	for i in range(4): sections[i].visible = i == number - 1
+	for i in range(3): bridges[i].visible = i < 2 and (i == number - 1 or i == number - 2)
 
 func prepare_passage(number: int) -> void:
 	show_stage(number)
