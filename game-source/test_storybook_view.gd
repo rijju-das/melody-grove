@@ -46,6 +46,10 @@ func run() -> void:
 	for child in game.get_children():
 		if child is CanvasLayer: child.hide()
 	await capture("explorer")
+	camera.position = Vector3(-1.8052565, 25, 25.872365)
+	camera.rotation = Vector3(-0.657394, 0, 0)
+	camera.size = 32.0
+	await capture("welcome")
 	print("PASS: four stages render with the Blender explorer and connected animation pivots")
 	scene.queue_free()
 	await process_frame
