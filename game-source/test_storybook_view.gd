@@ -12,13 +12,17 @@ func capture(label: String) -> void:
 func run() -> void:
 	var scene = load("res://main.tscn").instantiate()
 	assert(scene.get_node("Player/StorybookExplorer") != null, "New character is present before runtime setup")
-	assert(not scene.get_node("Melody Grove • musical forest/MS_Player").visible, "Old character is hidden in the saved scene")
+	assert(scene.find_child("MS_Player", true, false) == null, "Old character is absent from the forest asset")
 	var game = scene.get_node("MelodyController")
 	game.set_script(NoSaveController)
 	root.add_child(scene)
 	current_scene = scene
 	game.lesson.restore({"version":1,"records":[80,120,150,100].map(func(score): return {"complete":true,"score":score,"stars":3})})
 	assert(game.limbs.size() == 4, "All four explorer limb pivots are connected")
+	assert(scene.find_children("StorybookExplorer", "Node3D", true, false).size() == 1, "There is exactly one playable explorer")
+	for section in game.stage_path.sections:
+		assert(section.find_child("MS_Player", true, false) == null, "No stage contains the old character")
+		assert(section.find_child("MS_Torso", true, false) == null, "No detached old character meshes remain")
 	var rig = game.player.get_node("StorybookExplorer")
 	assert(rig.find_child("ExplorerEyeL", true, false) != null)
 	var camera = scene.get_node("GameCamera")

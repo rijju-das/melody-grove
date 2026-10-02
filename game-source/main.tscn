@@ -22,9 +22,6 @@ script = ExtResource("2_view")
 [node name="Melody Grove • musical forest" parent="." unique_id=1433227163 instance=ExtResource("1_ig7tw")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8052565, 1.1920929e-07, -0.12763524)
 
-[node name="MS_Player" parent="Melody Grove • musical forest"]
-visible = false
-
 [node name="Player" type="Node3D" parent="."]
 position = Vector3(-11.705256, 0.85500014, 4.872365)
 

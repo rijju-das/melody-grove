@@ -111,11 +111,6 @@ func _ready() -> void:
 			return
 		pads.append(pad)
 		route.append(pad.global_position + FOOT_OFFSET)
-	for limb_name in ["MS_Leg_L", "MS_Leg_R", "MS_Arm_L", "MS_Arm_R"]:
-		var limb := player.find_child(limb_name, true, false) as Node3D
-		if limb:
-			limbs.append(limb)
-			limb_rest.append(limb.rotation)
 	stage_path = preload("res://stage_path.gd").new()
 	add_child(stage_path)
 	stage_path.setup(forest)

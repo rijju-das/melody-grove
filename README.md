@@ -14,7 +14,7 @@ sections and pause with the game. Lighting and 2× edge smoothing keep the forms
 readable without adding heavy post-processing.
 
 The explorer is saved directly under `Player` in `main.tscn`, so it appears in
-the editor as well as during play. The original imported character is hidden;
+the editor as well as during play. The original character has been removed from the forest GLB;
 the playable character stays outside the duplicated forest sections.
 
 Edit `art-source/storybook_explorer.blend` in Blender, or regenerate that file and
