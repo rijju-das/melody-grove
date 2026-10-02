@@ -57,6 +57,7 @@ func _build_notes() -> void:
 		_disc(pad, 1.0, 0.42, -0.25, "b58346")
 		_disc(pad, 1.03, 0.10, -0.04, "f6dc8c")
 		tops.append(_disc(pad, 0.92, 0.08, 0.03, COLORS[i]))
+		tops[-1].scale = Vector3(0.68, 1, 0.68)
 		_label(pad, LABELS[i], Vector3(0, 0.50, 0.25), 32)
 		var ring := MeshInstance3D.new()
 		var mesh := TorusMesh.new()
@@ -89,6 +90,8 @@ func _disc(parent: Node3D, radius: float, height: float, y: float, color: String
 	mesh.radial_segments = 32
 	object.mesh = mesh
 	object.material_override = _material(color)
+	if color in ["bd8e50", "f3df9b", "c89a58", "f0d58b", "b78d55", "f6d78d", "b58346", "f6dc8c", "be935f", "f2d99a", "a67848", "f4d58b"]:
+		object.material_override = preload("res://stump_materials.gd").wood(radius)
 	parent.add_child(object)
 	object.position.y = y
 	return object

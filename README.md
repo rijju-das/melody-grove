@@ -5,6 +5,44 @@ between note platforms, listen, sing along, and build musical memory.
 
 ## Storybook visual pass
 
+The full living forest pass replaces the old round trees with the sculpted trunks
+and individual-leaf canopies from the approved Blender preview. Curled broadleaves,
+ferns, cupped flowers, mossy rocks and batched grass decorate the paths in all
+four stages. Textured moss replaces the flat meadow colours, with softer lighting.
+The two ground-level forest ponds have expanding, fading rings, lily pads and
+stone banks. Their surfaces move gently. Animation stops
+on pause and hidden sections skip their updates. Water uses a small opaque shader
+without screen reflections or refraction, suitable for the web compatibility renderer.
+The treetop, singing tree and opening tree gates use the Blender tree assets while
+keeping their playable layouts. Grass and plants leave note labels visible.
+
+`art-source/living_grove_foliage.blend` contains the editable foliage kit.
+`tools/export_living_foliage.py` rebuilds it and the six shared GLBs from the sibling
+`blender-previews/living-grove/living-grove-preview.blend` study when that source is
+available. Fine side veins and tiny stamens are omitted from game meshes.
+`living_forest.gd` handles plant movement and `living_water.gdshader` draws the
+pond ripples. These decorations are installed when Play starts.
+The main scene also includes `editor_forest.scn`, a saved stage-one view of the
+same scenery, materials and bridge, so the 3D editor shows the current forest.
+`grove_view.gd` removes that static preview before the interactive stages start;
+the player remains a single, separate scene node. After changing scenery builders,
+regenerate the preview with Godot:
+`godot --headless --path game-source --script test_bake_editor_forest.gd`.
+Edit the original Blender assets and scenery builders rather than this generated
+preview. Foliage and water animation run during Play.
+`art-source/living_grove_scenery.blend` holds the full tree/rock/grass/lily kit;
+`tools/export_forest_scenery.py` extracts it from the same approved preview.
+`forest_scenery.gd` shares its meshes between stages and `forest_ground.gdshader`
+adds moss detail without downloading external textures.
+
+The welcome page uses a deep forest palette, a fresh gameplay image, clearer stage
+cards and responsive phone layouts. Its styling is isolated in `docs/welcome.css`.
+The download estimate includes the new scenery (about 17 MB).
+
+Musical platforms have bark sides and concentric wood grain. Smaller coloured
+insets keep each note recognisable and preserve listening highlights. The shader
+is `stump_wood.gdshader`; `stump_materials.gd` shares its setup across stages.
+
 The playable character is a rounded Blender explorer with a leaf cap, teal coat,
 scarf and satchel. The runtime animates its shoulder and hip pivots, adds blinking
 and idle movement, and gives jumps a small stretch and landings a squash and

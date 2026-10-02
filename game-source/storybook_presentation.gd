@@ -7,6 +7,7 @@ var scarf: Node3D
 var eyes: Array[Node3D] = []
 var breeze: Array[Dictionary] = []
 var motes: Array[Dictionary] = []
+var foliage := preload("res://living_forest.gd").new()
 var age := 0.0
 var was_hopping := false
 var landing := 0.0
@@ -24,6 +25,7 @@ func setup(controller: Node) -> void:
 	round_mesh.rings = 10
 	round_mesh.radius = 1.0
 	round_mesh.height = 2.0
+	add_child(foliage)
 	_install_explorer()
 	for index in range(4):
 		var section: Node3D = game.stage_path.sections[index]
@@ -43,9 +45,9 @@ func setup(controller: Node) -> void:
 		else:
 			var center: Vector3 = game.stairway.center
 			# A layered distant forest replaces the empty sky behind the singing tree.
-			_sphere(garden, center + Vector3(0, -8.2, -4), Vector3(14, 2.3, 10), "6eaa81")
-			_sphere(garden, center + Vector3(-12, -9, -21), Vector3(18, 7, 8), "94bfa7")
-			_sphere(garden, center + Vector3(15, -10, -25), Vector3(20, 9, 9), "aacbb6")
+			_sphere(garden, center + Vector3(0, -8.2, -4), Vector3(14, 2.3, 10), "496d58")
+			_sphere(garden, center + Vector3(-12, -9, -21), Vector3(18, 7, 8), "6e9181")
+			_sphere(garden, center + Vector3(15, -10, -25), Vector3(20, 9, 9), "92b1a1")
 			for i in range(5):
 				_tree(garden, center + Vector3(-15 + i * 7.0, -7.0, -17 - (i % 2) * 4), 10 + (i % 3) * 2.5, i)
 			for i in range(5):
@@ -58,6 +60,7 @@ func setup(controller: Node) -> void:
 		for crown in section.find_children("*crown*", "MeshInstance3D", true, false):
 			if count % 5 == 0: breeze.append({"node": crown, "rest": crown.rotation, "phase": count * 0.7})
 			count += 1
+	foliage.setup(game)
 	_make_landing_ripple()
 
 func _install_explorer() -> void:
@@ -98,44 +101,22 @@ func _sphere(parent: Node3D, at: Vector3, dimensions: Vector3, color: String, lu
 	return item
 
 func _flower(parent: Node3D, at: Vector3, index: int) -> void:
-	var plant := Node3D.new()
-	parent.add_child(plant)
-	plant.position = at
-	for side in [-1, 1]:
-		var leaf := _sphere(plant, Vector3(side * 0.19, 0.14, 0), Vector3(0.35, 0.09, 0.15), "73a15f")
-		leaf.rotation.z = side * 0.4
-	_sphere(plant, Vector3(0, 0.30, 0), Vector3(0.055, 0.28, 0.055), "477f61")
-	var tint: String = ["f0b299", "edd183", "b3c2df"][index % 3]
-	for p in range(5):
-		var angle := TAU * p / 5
-		_sphere(plant, Vector3(cos(angle) * 0.14, 0.57, sin(angle) * 0.14), Vector3(0.15, 0.08, 0.15), tint)
-	_sphere(plant, Vector3(0, 0.62, 0), Vector3(0.09, 0.07, 0.09), "ffe4a1")
-	breeze.append({"node": plant, "rest": Vector3.ZERO, "phase": index * 1.3})
+	var kind: String = ["flower_coral", "flower_cream", "flower_lilac"][index % 3]
+	foliage.add_plant(parent, kind, at, 1.35, index * 1.3)
+	if index % 2 == 0:
+		foliage.add_plant(parent, "broadleaf", at + Vector3(0.65, -0.08, -0.3), 0.55, index * 0.9)
 
 func _border(parent: Node3D, center: Vector3, count: int) -> void:
 	for i in range(count):
 		var angle := TAU * (i + 0.5) / count
 		_flower(parent, center + Vector3(cos(angle) * 6.65, -0.25, sin(angle) * 6.65), i)
+	for i in range(4):
+		var angle := TAU * (i + 0.75) / 4.0
+		foliage.add_plant(parent, "fern", center + Vector3(cos(angle) * 6.5, -0.3, sin(angle) * 6.5), 0.6, i * 1.7)
 	_fireflies(parent, center + Vector3(0, 1.5, 0), 6)
 
 func _tree(parent: Node3D, at: Vector3, height: float, index: int) -> void:
-	var tree := Node3D.new()
-	parent.add_child(tree)
-	tree.position = at
-	var trunk := MeshInstance3D.new()
-	var shape := CylinderMesh.new()
-	shape.top_radius = 0.22
-	shape.bottom_radius = 0.58
-	shape.height = height
-	shape.radial_segments = 12
-	trunk.mesh = shape
-	trunk.material_override = _material("769280")
-	tree.add_child(trunk)
-	trunk.position.y = height * 0.5
-	for i in range(4):
-		var color: String = ["669d83", "79ac8d", "8fba98"][(index + i) % 3]
-		_sphere(tree, Vector3((i - 1.5) * 1.1, height + sin(i * 1.5), 0.35 * (i % 2)), Vector3(2.1, 2.7, 1.9), color)
-	breeze.append({"node": tree, "rest": Vector3.ZERO, "phase": index})
+	preload("res://forest_scenery.gd").tree(parent, at, height / 6.0, index * 1.7)
 
 func _fireflies(parent: Node3D, center: Vector3, count: int) -> void:
 	for i in range(count):

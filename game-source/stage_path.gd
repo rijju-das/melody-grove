@@ -103,18 +103,7 @@ func _make_bridge(index: int) -> void:
 		var tree := Node3D.new()
 		bridge.add_child(tree)
 		tree.position = Vector3(side * 2.0, 0, -length * 0.43)
-		var trunk := CylinderMesh.new()
-		trunk.bottom_radius = 0.3
-		trunk.top_radius = 0.16
-		trunk.height = 2.8
-		trunk.radial_segments = 7
-		_mesh(tree, trunk, Vector3(0, 1.3, 0), bark)
-		var crown := SphereMesh.new()
-		crown.radius = 1.5
-		crown.height = 2.3
-		crown.radial_segments = 10
-		crown.rings = 5
-		_mesh(tree, crown, Vector3(-side * 0.40, 2.9, 0), leaf)
+		preload("res://forest_scenery.gd").tree(tree, Vector3.ZERO, 0.8, side * 0.4)
 		pair.append(tree)
 	gates.append(pair)
 	move_gate(index, 0)

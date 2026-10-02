@@ -1,0 +1,38 @@
+[
+  {
+    "asset": "broadleaf",
+    "vertices": 2946,
+    "faces": 2736,
+    "bytes": 104376
+  },
+  {
+    "asset": "fern",
+    "vertices": 13314,
+    "faces": 10864,
+    "bytes": 380628
+  },
+  {
+    "asset": "canopy",
+    "vertices": 2455,
+    "faces": 2280,
+    "bytes": 89836
+  },
+  {
+    "asset": "flower_coral",
+    "vertices": 887,
+    "faces": 760,
+    "bytes": 33800
+  },
+  {
+    "asset": "flower_cream",
+    "vertices": 887,
+    "faces": 760,
+    "bytes": 33808
+  },
+  {
+    "asset": "flower_lilac",
+    "vertices": 887,
+    "faces": 760,
+    "bytes": 33808
+  }
+]

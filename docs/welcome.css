@@ -1,0 +1,30 @@
+/* The welcome page follows the living forest; in-game controls retain their layout. */
+#welcome{max-width:none;padding:0 max(24px,calc((100vw - 1240px)/2));background:radial-gradient(ellipse at 85% 9%,#456e4d66,transparent 40%),linear-gradient(#153a30 0 730px,#f6f4e8 730px);color:#f8f1dc}
+#welcome header{padding:25px 0;border-bottom:1px solid #adc19133}
+#welcome .brand{letter-spacing:-.6px}#welcome .tag{color:#d3dfb6;border-color:#a6be7f55;font-size:10px;letter-spacing:1.7px}
+#welcome .hero{grid-template-columns:.9fr 1.3fr;gap:44px;padding:64px 0 50px;min-height:530px}
+#welcome .intro .eyebrow{color:#bfd18c;font-size:10px;letter-spacing:2px}
+#welcome .intro h1{font-size:clamp(44px,4.8vw,68px);letter-spacing:-2.6px;line-height:1.07;margin:22px 0}
+#welcome .intro em{color:#d8d999}#welcome .lead{color:#d0dbcb;font-size:16px;max-width:390px;line-height:1.75}
+#welcome #play{background:#ebc783;border:1px solid #f9d998;color:#183c30;box-shadow:0 5px 0 #927342;min-height:55px;padding:15px 22px;margin-top:25px;border-radius:15px;gap:28px;transition:background .15s,transform .15s}
+#welcome #play:hover{background:#f6d9a0;transform:translateY(-2px)}
+#welcome .journey-facts{display:flex;flex-wrap:wrap;gap:8px 14px;color:#c6d6ba;max-width:340px;font-size:10px;line-height:1.6;margin-top:24px}
+#welcome .journey-facts span+span:before{content:'·';margin-right:14px;color:#ebc783}
+#welcome .scene{margin:0;aspect-ratio:1.44;border-radius:120px 120px 30px 30px;background:#7ca199;border:1px solid #b4c7a766;box-shadow:0 22px 65px #041b2455;isolation:isolate}
+#welcome .scene img{width:100%;height:100%;object-fit:cover;object-position:center;transform:none}
+#welcome .scene-label{display:flex;align-items:center;gap:10px;background:#173e35ed;color:#fff3d7;border:1px solid #c6d29b66;padding:11px 16px;font-size:11px;bottom:16px;box-shadow:0 4px 18px #13261a33}
+.scene-dot{width:6px;height:6px;border-radius:50%;background:#d5df8f}
+#welcome .forest-invitation{display:flex;align-items:center;gap:20px;padding:24px 30px;margin:0 0 45px;background:#e9ecdb;color:#294f3e;border:1px solid #cad6b3;border-radius:20px;box-shadow:0 8px 28px #0b302b12}
+.forest-invitation>span:first-child{font:42px Georgia,serif;color:#748a49}.forest-invitation p{margin:0;font-size:14px;line-height:1.8}.forest-invitation strong{font-weight:450;color:#617450}.mic-note{margin-left:auto;font-size:11px;border:1px solid #bdcba7;padding:10px 13px;border-radius:30px;white-space:nowrap}
+#welcome .journey,#welcome .take-along,#welcome .download,#welcome footer{color:#173e35}
+#welcome .journey{padding-bottom:48px}#welcome .journey-heading h2{font-size:34px}#welcome .journey .eyebrow{color:#6b7b4a}#welcome #best-total{background:#e7ebd9;border:1px solid #ccd6bd}
+#welcome .stage-cards{gap:14px}#welcome .stage-card{min-height:218px;border:1px solid #cbd4b9;background:#fffdf4;border-radius:22px;padding:22px 20px;gap:15px;box-shadow:0 3px 0 #ccd3ba;transition:border-color .15s,background .15s}
+#welcome .stage-card:hover:not(:disabled){background:#eff3df;border-color:#7e975b}#welcome .stage-card:disabled{opacity:1;background:#eceee2;color:#65715e;box-shadow:none;border-color:#d6dcc9}
+#welcome .stage-number{display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#e5ebcd;color:#576d3b;border-radius:50%;font-size:11px;letter-spacing:1px}
+#welcome .stage-card strong{font-size:23px}#welcome .stage-card>span:not(.stage-number){font-size:12px;line-height:1.55}#welcome .stage-result{margin-top:auto;color:#4b6442}#welcome .stage-card:disabled .stage-result{color:#64705d}
+#welcome .take-along{padding-top:34px;gap:32px}#welcome .install-options button{background:#fffdf4;border-color:#cbd4b9;border-radius:18px}#welcome .install-options button:hover{background:#e8edd9}
+#welcome .download{background:#e7ecd9;border:1px solid #d1d9bf}#welcome footer{padding-top:30px;color:#6a7b63}
+@media(min-width:1400px){#welcome .hero{padding-top:72px;padding-bottom:60px}}
+@media(max-width:1000px) and (min-width:701px){#welcome .hero{gap:24px;grid-template-columns:1fr 1.1fr}#welcome .intro h1{font-size:48px}#welcome .stage-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#welcome .stage-card{min-height:195px}.mic-note{white-space:normal;max-width:170px;text-align:center}}
+@media(max-width:700px){#welcome{padding:0 22px;background:radial-gradient(ellipse at 85% 5%,#456e4d66,transparent 28%),linear-gradient(#153a30 0 770px,#f6f4e8 770px)}#welcome header{padding:20px 0}#welcome .hero{grid-template-columns:1fr;gap:30px;padding:30px 0 28px;min-height:auto}#welcome .intro h1{font-size:49px;letter-spacing:-2px;margin:17px 0}#welcome .lead{font-size:15px;line-height:1.7;margin-bottom:10px}#welcome #play{width:100%;margin-top:20px}#welcome .journey-facts{max-width:none;font-size:10px;margin-bottom:0;gap:5px 10px}#welcome .journey-facts span+span:before{margin-right:10px}#welcome .scene{aspect-ratio:1.44;border-radius:64px 64px 22px 22px}#welcome .scene-label{font-size:10px;bottom:12px;padding:9px 13px}#welcome .forest-invitation{padding:20px;gap:13px;margin-bottom:36px;flex-wrap:wrap}.forest-invitation p{font-size:12px}.mic-note{margin-left:42px;font-size:10px;padding:7px 10px}#welcome .journey-heading h2{font-size:29px;line-height:1.2}#welcome .stage-cards{grid-template-columns:1fr;gap:12px}#welcome .stage-card{min-height:130px;grid-template-columns:36px 1fr;padding:20px;gap:8px 15px}#welcome .stage-number{grid-row:1/4;padding:0}#welcome .stage-card strong{font-size:23px}#welcome .stage-card .stage-result{margin-top:3px}#welcome .take-along{grid-template-columns:1fr;gap:15px}#welcome footer{font-size:10px}}
+@media(prefers-reduced-motion:reduce){#welcome #play,#welcome .stage-card{transition:none}}

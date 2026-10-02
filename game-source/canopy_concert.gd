@@ -54,21 +54,16 @@ func _sphere(parent: Node3D, at: Vector3, radius: float, color: String, glow := 
 	return object
 
 func _decorate(arena: Node3D, index: int) -> void:
-	# Broad crowns and trunks make these read as elevated tree platforms.
-	arena._disc(arena, 1.3, 32.0, -16.5, "775339")
-	# A distant tree line gives the clearings depth without obscuring note targets.
+	# Actual Blender trees support the elevated musical clearings.
 	for j in range(3):
-		var tree := Node3D.new()
-		arena.add_child(tree)
-		tree.position = Vector3(-8 + j * 8, -2.0 + (j % 2), -13.0 - (j % 2) * 2)
-		arena._disc(tree, 0.65, 40.0, -18.0, "786548")
-		for side in [-1, 0, 1]:
-			var crown := _sphere(tree, Vector3(side * 1.7, 1.2 + (1.5 if side == 0 else 0), 0.6 * abs(side)), 2.3, ["5d9d83", "86b793", "aac896"][(j + index + side + 3) % 3])
-			crown.scale.y = 1.15
-	for j in range(7):
-		var angle := TAU * j / 7.0
-		var crown := _sphere(arena, Vector3(cos(angle) * 5.8, -2.0, sin(angle) * 5.8), 2.0, ["38735e", "4c8c70", "72a578"][j % 3])
-		crown.scale.y = 0.7
+		preload("res://forest_scenery.gd").tree(arena, Vector3(-9 + j * 9, -10, -12), 2.6, j * 1.4)
+	for j in range(4):
+		var angle := TAU * j / 4.0
+		var leaves: Node3D = preload("res://assets/living-grove/canopy.glb").instantiate()
+		arena.add_child(leaves)
+		leaves.position = Vector3(cos(angle) * 7.4, -1.8, sin(angle) * 7.4)
+		leaves.scale = Vector3.ONE * 1.1
+		leaves.rotation.y = angle
 	var lamp := Node3D.new()
 	arena.add_child(lamp)
 	lamp.position = Vector3(0, 0, 0.75)

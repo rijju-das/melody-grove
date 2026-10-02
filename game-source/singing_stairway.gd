@@ -12,21 +12,7 @@ func setup_stairway(section: Node3D, at: Vector3, entry_point: Vector3) -> void:
 	_disc(self, 1.9, 0.12, -0.04, "f2d99a")
 	_label(self, "SINGING STAIRWAY", Vector3(0, 0.35, 1.3), 28)
 	_path(entry_point, center)
-	var trunk := Node3D.new()
-	add_child(trunk)
-	trunk.position = Vector3(0, 2, -5)
-	_disc(trunk, 1.3, 20, 0, "896343")
-	for j in range(9):
-		var crown := MeshInstance3D.new()
-		var sphere := SphereMesh.new()
-		sphere.radius = 2.4
-		sphere.height = 3.6
-		sphere.radial_segments = 12
-		sphere.rings = 6
-		crown.mesh = sphere
-		crown.material_override = _material(["78ac78", "a9c984", "4f9479"][j % 3])
-		trunk.add_child(crown)
-		crown.position = Vector3(cos(j * TAU / 9) * 4, 10 + sin(j * 2) * 1.1, sin(j * TAU / 9) * 3)
+	preload("res://forest_scenery.gd").tree(self, Vector3(0, -7, -5), 3.3, 0.4)
 	for i in range(5):
 		var pad := Node3D.new()
 		add_child(pad)
@@ -36,6 +22,7 @@ func setup_stairway(section: Node3D, at: Vector3, entry_point: Vector3) -> void:
 		_disc(pad, 1.3, 0.45, -0.30, "a67848")
 		_disc(pad, 1.32, 0.12, -0.04, "f4d58b")
 		tops.append(_disc(pad, 1.2, 0.10, 0.03, ["ecb86a", "9cc58a", "80bbb4", "9cc58a", "ecb86a"][i]))
+		tops[-1].scale = Vector3(0.68, 1, 0.68)
 		_label(pad, "%d · %s" % [i + 1, ["Do", "Re", "Mi", "Re", "Do"][i]], Vector3(0, 0.5, 0), 35)
 		var ring := MeshInstance3D.new()
 		var torus := TorusMesh.new()
