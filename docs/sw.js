@@ -1,4 +1,4 @@
-const CACHE='melody-grove-4224442c54eb';
+const CACHE='melody-grove-a1a6804b7baa';
 const FILES=["./app.js", "./forest.png", "./game-config.js", "./game.apple-touch-icon.png", "./game.audio.position.worklet.js", "./game.audio.worklet.js", "./game.icon.png", "./game.js", "./game.pck", "./game.png", "./game.wasm.gz", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon.svg", "./index.html", "./manifest.webmanifest", "./style.css", "./voice-input.js", "./welcome.css"];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);

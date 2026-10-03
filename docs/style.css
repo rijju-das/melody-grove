@@ -111,3 +111,7 @@
 #mic-help-dialog .small{font-size:11px;line-height:1.5}
 #mic-help-dialog>button:not(.close){width:100%;margin-top:8px;min-height:44px}
 #mic-help-source{display:block;font-size:12px;color:#285747;margin-top:16px;text-align:center}
+
+/* Keep the replay prompt inside the centre target, clear of note flowers. */
+#glade-listen.answer-phase .glade-guide{bottom:50%;transform:translate(-50%,50%);animation:none;pointer-events:none}
+#glade-listen.answer-phase .glade-arrow{display:none}

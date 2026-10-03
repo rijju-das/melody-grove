@@ -24,7 +24,7 @@ $('sound-check').onclick = async () => {
     $('sound-hint').textContent='Playing Do · check your phone volume';
   } catch {$('sound-hint').textContent='Turn Silent Mode off and tap again.';}
 };
-const PROGRESS_KEY='melody-grove-progress-v1';
+const PROGRESS_KEY='melody-grove-ground-progress-v1';
 let completedShown=false, activeLesson=null, pendingStage=1;
 let completionTimer, rewardFrame, rewardAttempt=null, lastReward=0, displayedPoints=0;
 const rewardAnimations=new Set();
@@ -191,7 +191,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 const memoryLabels=['Low Do · C4','Re · D4','Mi · E4','Fa · F4','Sol · G4','La · A4','Ti · B4','High Do · C5'];
 const memoryButtons=memoryLabels.map((label,index)=>{
   const button=document.createElement('button');button.dataset.note=index;
-  button.setAttribute('aria-label',`Jump to ${label} (key ${index+1})`);
+  button.setAttribute('aria-label',`Walk to ${label} (key ${index+1})`);
   button.onclick=()=>command('note',index);
   $('memory-targets').append(button);return button;
 });
@@ -220,6 +220,7 @@ function updateMemory(state) {
   $('memory-targets').hidden=!tappable||state.transitioning;
   memoryInputBlocked=!memory||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase!=='answer';
   const glade=$('glade-listen');
+  glade.classList.toggle('answer-phase',state.lesson.phase==='answer');
   glade.hidden=!memory||state.transitioning||state.lesson.phase==='complete';
   glade.disabled=state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase==='listening'||state.lesson.phase==='complete';
   $('glade-prompt').textContent=state.lesson.phase==='listening'?'♪ Listening…':(state.lesson.phase==='answer'?'Listen again':'Tap to listen');
@@ -233,7 +234,7 @@ function updateMemory(state) {
   $('memory-settings').hidden=false;
   memoryButtons.forEach((button,i)=>{
     button.disabled=!tappable||state.paused||state.hopping||state.recovering||state.transitioning||state.lesson.phase==='complete'||(memory&&state.lesson.phase!=='answer');
-    button.setAttribute('aria-label',memory?`Jump to ${memoryLabels[i]} (key ${i+1})`:`Jump to ${memoryLabels[i]} and hear its note`);
+    button.setAttribute('aria-label',memory?`Walk to ${memoryLabels[i]} (key ${i+1})`:`Walk to ${memoryLabels[i]} and hear its note`);
     const point=state.targets?.[i];
     button.hidden=!point||point[0]<0||point[0]>1||point[1]<0||point[1]>1;
     if(point){button.style.left=`${point[0]*100}%`;button.style.top=`${point[1]*100}%`;button.style.width=`${point[2]*100}%`;}
@@ -244,7 +245,7 @@ function updateMemory(state) {
   }
   $('memory-markers').setAttribute('aria-label',`${state.memory_marks||0} of ${count} notes correct`);
   [...$('memory-markers').children].forEach((marker,i)=>{marker.classList.toggle('filled',i<(state.memory_marks||0));marker.textContent=i<(state.memory_marks||0)?'✓':i+1;});
-  document.querySelector('.keyboard').textContent=memory?'Click a platform or press 1–8 to jump · L: listen again':'Tap platforms or use arrows / WASD to hop · Space: hear note · C: camera';
+  document.querySelector('.keyboard').textContent=memory?'Tap flowers or press 1–8 to walk there · L: listen again':'Tap ground or use arrows / WASD to walk · Space: hear note · C: camera';
   if(memory)$('view-label').textContent=state.lesson.phase==='listening'?'WATCH THE GLOW':'MUSICAL MEMORY';
   if(state.lesson.stage===3)$('view-label').textContent=state.guided&&state.lesson.phase==='listening'?'GUIDED REPLAY':['WATCH & REPEAT','FIRST NOTE GLOWS','LISTEN BY EAR'][Math.min((state.clearing||1)-1,2)];
 }
@@ -339,7 +340,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)voiceInput.
 
 window.groveState = state => {
   paused=state.paused;
-  $('note-status').textContent=state.text.replace(' · Space to repeat','').replace('Paused · press P or click Resume','Paused · tap Resume to continue').replace('Free play · use the arrow keys to continue','Hop onto a step, listen, then sing along').replace('At the start · press Up, Right, W or D','At the start · tap Next to hear Do');
+  $('note-status').textContent=state.text.replace(' · Space to repeat','').replace('Paused · press P or click Resume','Paused · tap Resume to continue').replace('Free play · use the arrow keys to continue','Walk to a flower, listen, then sing along').replace('At the start · press Up, Right, W or D','At the start · tap Next to hear Do');
   $('pause').textContent=paused?'Resume':'Pause';
   $('step-count').textContent=state.step?`NOTE ${state.step} / 8`:(state.lesson?.stage===2?'CENTRE':'START');
   if (!state.lesson) return;
@@ -348,12 +349,12 @@ window.groveState = state => {
   updateMemory(state);
   updateVoice(state);
   $('path-transition').hidden=!state.transitioning;
-  $('path-destination').textContent=state.concert_moving?`Growing the bridge to clearing ${state.clearing+1}…`:(state.transitioning?`Entering ${['','Echo meadow','Canopy concert','Singing stairway'][lesson.stage]}…`:'');
-  $('lesson-title').textContent=lesson.stage===3?`Canopy concert · Clearing ${state.clearing}/3`:(lesson.stage===2?`Echo meadow · Melody ${Math.min(lesson.round,3)}/3`:`0${lesson.stage} · ${lesson.title}`);
+  $('path-destination').textContent=state.concert_moving?`Growing the bridge to clearing ${state.clearing+1}…`:(state.transitioning?`Entering ${['','Echo Clearing','Broken Brook','Singing Tree'][lesson.stage]}…`:'');
+  $('lesson-title').textContent=lesson.stage===3?`Broken Brook · Clearing ${state.clearing}/3`:(lesson.stage===2?`Echo Clearing · Melody ${Math.min(lesson.round,3)}/3`:`0${lesson.stage} · ${lesson.title}`);
   $('stage-score').textContent=`${lesson.score} pts`;
-  $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 gems collected · 80 points to unlock stage 2` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
-  $('lesson-progress').max=lesson.stage===1?8:3;
-  $('lesson-progress').value=lesson.stage===1?lesson.collected:(lesson.phase==='complete'?3:lesson.round-1);
+  $('lesson-goal').textContent=lesson.stage===1 ? `${lesson.collected} / 8 flowers awakened · 80 points to unlock stage 2` : lesson.stage===4 ? `${lesson.phase==='complete'?5:lesson.round-1} / 5 blossoms opened · listen, then sing` : `Melody ${lesson.round} / 3 · ${lesson.answer} / ${lesson.length||4} notes chosen · ${lesson.mistakes} mistakes`;
+  $('lesson-progress').max=lesson.stage===1?8:(lesson.stage===4?5:3);
+  $('lesson-progress').value=lesson.stage===1?lesson.collected:(lesson.phase==='complete'?(lesson.stage===4?5:3):lesson.round-1);
   $('note-action').dataset.command=lesson.stage===1?'repeat':'choose';
   $('note-action').textContent=lesson.stage===1?'♪ Play note':'✓ Choose note';
   $('listen').hidden=true;
@@ -372,9 +373,9 @@ window.groveState = state => {
     $('earned-stars').textContent='★ '.repeat(lesson.stars)+'☆ '.repeat(3-lesson.stars);
     $('earned-stars').setAttribute('aria-label',`${lesson.stars} of 3 stars`);
     $('complete-title').textContent=lesson.stage===4?'You did it!':'Hurray!';
-    $('complete-message').textContent=lesson.stage===4?'You sang your way to the treetop!':lesson.stage===3?'Your music brought the canopy to life!':`Well done! You crossed stage ${['one','two','three'][lesson.stage-1]}.`;
+    $('complete-message').textContent=lesson.stage===4?'Your voice brought the Singing Tree to life!':lesson.stage===3?'Your music restored the brook and reunited the forest choir!':`Well done! You crossed stage ${['one','two','three'][lesson.stage-1]}.`;
     $('complete-summary').textContent=`${lesson.score} points earned · ${lesson.stage===1?'8 gems collected':lesson.stars+' stars earned'}`;
-    $('next-stage-hint').textContent=lesson.stage<4?`Stage ${lesson.stage+1} unlocked · ${['','Echo meadow','Canopy concert','Singing stairway'][lesson.stage]}`:'The whole grove is yours. Keep singing!';
+    $('next-stage-hint').textContent=lesson.stage<4?`Stage ${lesson.stage+1} unlocked · ${['','Echo Clearing','Broken Brook','Singing Tree'][lesson.stage]}`:'The whole grove is yours. Keep singing!';
     $('save-result').textContent=state.saved?'Best score and stage unlock saved on this device.':'Your browser could not save progress. Keep this tab open to continue.';
     $('continue-stage').textContent=lesson.stage<4?`Next stage ${lesson.stage+1} →`:'Back to your journey →';
     // Let the last gem reach the wallet before opening the stage result.
@@ -398,7 +399,7 @@ document.querySelectorAll('[data-command]').forEach(button=>button.onclick=()=>c
 $('volume').oninput=event=>command('volume',Number(event.target.value));
 function home() {voiceInput.stop();if(gameStarted&&!paused)command('pause');command('stop_celebration');clearRewards();$('complete-dialog').close();$('game-screen').hidden=true;$('welcome').hidden=false;updateStageMenu();window.scrollTo(0,0);}
 let resumeAfterStageMenu=false;
-const stageTitles=['Find the notes','Echo meadow','Canopy concert','Singing stairway'];
+const stageTitles=['Whispering Meadow','Echo Clearing','Broken Brook','Singing Tree'];
 function openStagePicker(){
   if(!gameStarted||!activeLesson||$('open-stages').disabled||$('stage-picker').open)return;
   resumeAfterStageMenu=!paused;
@@ -468,3 +469,11 @@ async function play(stageNumber=pendingStage) {
 $('play').onclick=()=>play(pendingStage);$('retry').onclick=()=>{location.reload();};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameStarted){command('stop_celebration');if(!paused)command('pause');}});
 saveOffline();
+
+// One tap on the forest floor starts a walk. UI buttons consume their own taps.
+$('canvas').addEventListener('pointerup',event=>{
+  if(!gameStarted||paused||event.button>0)return;
+  const box=$('canvas').getBoundingClientRect();
+  if(typeof window.groveCommand==='function') window.groveCommand('walk',(event.clientX-box.left)/box.width,(event.clientY-box.top)/box.height);
+  $('canvas').focus({preventScroll:true});
+});

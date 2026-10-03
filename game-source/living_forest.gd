@@ -31,6 +31,7 @@ func setup(controller: Node) -> void:
 	for section in game.stage_path.sections.slice(0, 2):
 		var pond := section.find_child("Grove_pond", true, false) as MeshInstance3D
 		if pond:
+			pond.position = Vector3(9, 0.23, 10)
 			var water := ShaderMaterial.new()
 			water.shader = preload("res://living_water.gdshader")
 			pond.mesh = _pond_surface()
@@ -91,8 +92,9 @@ func _full_forest(section: Node3D) -> void:
 	for i in range(1800):
 		var at := Vector2(random.randf_range(-13, 13), random.randf_range(-12, 7))
 		if pow(at.x / 13.2, 2) + pow((at.y + 1) / 9.1, 2) > 1.0: continue
-		if pow((at.x - 5) / 5.6, 2) + pow((at.y - 4.5) / 2.9, 2) < 1.0: continue
+		if pow((at.x - 9) / 5.6, 2) + pow((at.y - 10) / 2.9, 2) < 1.0: continue
 		if section == game.stage_path.sections[1] and at.length() < 7.3: continue
+		if at.x > -12 and at.x < 13 and at.y > -9 and at.y < 6: continue
 		var world := section.to_global(Vector3(at.x, 0, at.y))
 		var clear := true
 		for point in game.route:
@@ -109,11 +111,11 @@ func _full_forest(section: Node3D) -> void:
 	for i in range(13):
 		var angle := TAU * i / 13.0
 		if i in [1, 5, 9]: continue
-		scenery.rock(garden, Vector3(5 + cos(angle) * 5.25, 0.12, 4.5 + sin(angle) * 2.65), 1.3 + (i % 3) * 0.7, angle)
+		scenery.rock(garden, Vector3(9 + cos(angle) * 5.25, 0.12, 10 + sin(angle) * 2.65), 1.3 + (i % 3) * 0.7, angle)
 	for i in range(3):
 		var lily: Node3D = preload("res://assets/living-grove/lily_pad.glb").instantiate()
 		garden.add_child(lily)
-		lily.position = Vector3(6.7 + i * 0.75, 0.335, 4.2 + sin(i * 1.8) * 0.65)
+		lily.position = Vector3(10.7 + i * 0.75, 0.335, 9.7 + sin(i * 1.8) * 0.65)
 		lily.scale = Vector3.ONE * (1.6 + i * 0.3)
 
 func _style_arena(arena: Node3D) -> void:

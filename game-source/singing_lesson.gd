@@ -116,7 +116,7 @@ func tick(delta: float) -> void:
 			game.lesson.demo_finished()
 			game.audio.pitch_scale = 1
 			freshness = 0
-			feedback = "Your turn · sing or hum gently." if not practice else "Sing along, then tap Next step. No points in practice."
+			feedback = "Your turn · sing or hum gently." if not practice else "Sing along, then tap Next blossom. No points in practice."
 		return
 	if game.lesson.phase != "answer" or practice or not enabled: return
 	freshness -= delta
@@ -141,11 +141,10 @@ func tick(delta: float) -> void:
 	if held >= HOLD_SECONDS: _climb()
 
 func _climb() -> void:
-	game._start_note_hop(game.lesson.round_index + 1)
 	held = 0
 	miss_time = 0
 	freshness = 0
-	feedback = "Good! Jumping to the next platform…"
+	landed()
 
 func landed() -> void:
 	var step: int = game.lesson.round_index
@@ -160,7 +159,7 @@ func landed() -> void:
 		feedback = "Well done! +20 points. Listen to your next note."
 		if game.lesson.phase == "complete":
 			stop()
-			feedback = "You sang your way to the treetop!"
+			feedback = "Your voice brought the Singing Tree to life!"
 		game._check_completion()
 	game.memory_marks = game.lesson.round_index
 	game._update_lesson_hud()

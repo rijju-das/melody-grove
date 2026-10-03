@@ -13,7 +13,7 @@ var wobble_note := -1
 var wobble_time := 0.0
 
 func setup(section: Node3D) -> void:
-	center = section.global_position + Vector3(0, 1.1, 0)
+	center = section.global_position + Vector3(0, 0.06, 0)
 	exit_waypoint = center + Vector3(6.6, 0, 2.3)
 	exit_point = section.find_child("MS_Pad_7", true, false).global_position + Vector3(0, 0.135, 0)
 	var entry: Vector3 = section.find_child("Grove_starting surface", true, false).global_position + Vector3(0, 0.135, 0)
@@ -24,28 +24,16 @@ func setup(section: Node3D) -> void:
 		if title.begins_with("Grove_leaf twig") or title.begins_with("Grove_node leaf") or title.begins_with("Grove_node root support") or title in ["MS_Title", "MS_Subtitle"]:
 			child.hide()
 	global_position = center
-	_disc(self, 6.9, 0.35, -0.75, "729b58")
-	_disc(self, 1.25, 0.30, -0.20, "bd8e50")
-	_disc(self, 1.16, 0.12, -0.03, "f3df9b")
-	_label(self, "LISTENING GLADE", Vector3(0, 0.12, 0.75), 27)
+
+	preload("res://ground_flower.gd").listening_tree(self)
+	_label(self, "ECHO TREE", Vector3(0, 0.12, 0.75), 27)
 	_build_notes()
-	_path(entry, center)
-	_path(center, exit_waypoint)
-	_path(exit_waypoint, exit_point)
-	var exit_stump := Node3D.new()
-	add_child(exit_stump)
-	exit_stump.global_position = exit_point
-	_disc(exit_stump, 1.0, 0.35, -0.20, "c89a58")
-	_disc(exit_stump, 0.94, 0.08, 0.01, "f0d58b")
 
 func setup_canopy(at: Vector3, index: int) -> void:
 	center = at
 	global_position = center
-	_disc(self, 6.9, 0.65, -0.65, ["5c956b", "548f8f", "7877a4"][index])
-	_disc(self, 6.65, 0.10, -0.30, ["9ab97a", "8fbca3", "abb9ac"][index])
-	_disc(self, 1.30, 0.32, -0.16, "b78d55")
-	_disc(self, 1.18, 0.10, 0.02, "f6d78d")
-	_label(self, "MUSICAL LANTERN", Vector3(0, 0.15, 0.9), 25)
+	_disc(self, 1.18, 0.04, -0.02, "75976d")
+	_label(self, "FOREST CHOIR", Vector3(0, 0.15, 0.9), 25)
 	_build_notes()
 
 func _build_notes() -> void:
@@ -54,11 +42,8 @@ func _build_notes() -> void:
 		add_child(pad)
 		var angle := PI + TAU * i / 8.0
 		pad.position = Vector3(cos(angle) * 5.1, 0, sin(angle) * 5.1)
-		_disc(pad, 1.0, 0.42, -0.25, "b58346")
-		_disc(pad, 1.03, 0.10, -0.04, "f6dc8c")
-		tops.append(_disc(pad, 0.92, 0.08, 0.03, COLORS[i]))
-		tops[-1].scale = Vector3(0.68, 1, 0.68)
-		_label(pad, LABELS[i], Vector3(0, 0.50, 0.25), 32)
+		tops.append(preload("res://ground_flower.gd").build(pad, Color(COLORS[i])))
+		_label(pad, LABELS[i], Vector3(0, 1.05, 0.0), 32)
 		var ring := MeshInstance3D.new()
 		var mesh := TorusMesh.new()
 		mesh.inner_radius = 1.06
@@ -112,16 +97,17 @@ func _label(parent: Node3D, text: String, at: Vector3, font_size: int) -> void:
 func _path(from: Vector3, to: Vector3) -> void:
 	var length := from.distance_to(to)
 	var plank := BoxMesh.new()
-	plank.size = Vector3(1.2, 0.16, 0.48)
-	var material := _material("ba9259")
+	plank.size = Vector3(1.5, 0.04, 0.55)
+	var material := _material("746c4c")
 	var count := ceili(length / 0.5)
 	for i in range(count + 1):
 		var board := MeshInstance3D.new()
 		board.mesh = plank
 		board.material_override = material
 		add_child(board)
-		board.global_position = from.lerp(to, float(i) / count) - Vector3.UP * 0.16
-		board.look_at(board.global_position + (to - from), Vector3.UP)
+		board.global_position = from.lerp(to, float(i) / count)
+		board.global_position.y = .018
+		board.rotation.y = atan2(to.x-from.x,to.z-from.z)
 
 func light_note(index: int) -> void:
 	clear_lights()

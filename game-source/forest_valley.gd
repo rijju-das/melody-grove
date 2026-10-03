@@ -6,9 +6,9 @@ const REEDS = preload("res://assets/forest-valley/reeds.glb")
 
 static func terrain_height(x: float, z: float) -> float:
 	var rise := smoothstep(13.0, 34.0, -z)
-	var height := -0.15 + 0.27 * sin(x * 0.13 + 1.0) * cos(z * 0.16)
+	var height := 0.0
 	height += rise * (2.8 + sin(x * 0.13) * 1.8 + cos(z * 0.12))
-	var pond_distance := pow((x - 5.0) / 5.5, 2) + pow((z - 4.5) / 2.9, 2)
+	var pond_distance := pow((x - 9.0) / 5.5, 2) + pow((z - 10.0) / 2.9, 2)
 	height = lerpf(-0.08, height, smoothstep(0.8, 1.35, pond_distance))
 	return height
 
@@ -83,9 +83,9 @@ static func build(parent: Node3D) -> void:
 		instance_asset(CRAG,valley,Vector3(x,terrain_height(x,z)-1,z),Vector3(2.3,2.8+(i%3),2.2),i*1.8)
 	# Large mossy bank boulders are deliberately asymmetrical and spaced in groups.
 	for at in [Vector3(1.1,.15,6.8),Vector3(8.8,.05,6.7),Vector3(10.4,.1,3.4),Vector3(2.3,.1,2.0)]:
-		preload("res://forest_scenery.gd").rock(valley,at,3.3,random.randf_range(0,TAU))
+		preload("res://forest_scenery.gd").rock(valley,at + Vector3(4,0,5.5),3.3,random.randf_range(0,TAU))
 	for i in range(6):
-		instance_asset(REEDS,valley,Vector3(2.6+i*1.25,.24,2.1+sin(i)*.35),Vector3.ONE*(.8+i*.08),i*1.3)
+		instance_asset(REEDS,valley,Vector3(6.6+i*1.25,.24,7.6+sin(i)*.35),Vector3.ONE*(.8+i*.08),i*1.3)
 	# Grass batches surround the clearing without obscuring musical platforms.
 	var grass: Array[Vector3] = []
 	for i in range(1800):

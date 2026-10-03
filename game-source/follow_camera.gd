@@ -44,14 +44,14 @@ func _update_camera(delta: float) -> void:
 		target = controller.route[index]
 		if controller.hopping:
 			target = target.lerp(controller.route[controller.destination], smoothstep(0, 1, controller.hop_elapsed / controller.HOP_SECONDS))
-		target += Vector3(0, 2.1, -1.0)
-		target_size = maxf(17.5, 12.0 * aspect)
+		target = controller.stairway.center + Vector3(0, 3.5, -2.5)
+		target_size = maxf(22.0, 15.0 * aspect)
 	elif controller.lesson.stage >= 2:
-		target = controller.active_arena().center + Vector3.UP * 0.7
-		target_size = maxf(16.8, 14.0 * aspect)
+		target = controller.active_arena().center.lerp(controller.player.global_position,0.18) + Vector3.UP * 0.7
+		target_size = maxf(18.5, 16.0 * aspect)
 		if not OS.has_feature("web"):
-			target_size = maxf(18.0, 14.0 * aspect)
-			target -= global_basis.y * 1.1
+			target_size = maxf(21.0, 16.0 * aspect)
+			target += global_basis.y * 0.25
 	elif is_overview():
 		target = (controller.route[0] + controller.route[-1]) * 0.5
 		target_size = maxf(32.0, 22.0 * aspect)
@@ -68,7 +68,7 @@ func _update_camera(delta: float) -> void:
 	var weight := 1.0 if not initialized else 1.0 - exp(-5.5 * delta)
 	focus = focus.lerp(target, weight)
 	size = lerpf(size, target_size, weight)
-	rotation.x = lerpf(rotation.x, -0.95 if controller.lesson.stage in [2, 3] and not controller.transitioning else -0.657394, weight)
+	rotation.x = lerpf(rotation.x, -0.72 if controller.lesson.stage in [2, 3] and not controller.transitioning else -0.657394, weight)
 	global_position = focus + global_basis.z * 30.0
 	initialized = true
 
@@ -78,11 +78,7 @@ func _update_forest_camera(delta: float) -> void:
 		initialized = false
 	keep_aspect = Camera3D.KEEP_HEIGHT
 	fov = 62.0
-	var at: Vector3 = controller.route[controller.route_index]
-	if controller.transitioning:
-		at = controller.travel_position
-	elif controller.hopping:
-		at = at.lerp(controller.route[controller.destination], smoothstep(0, 1, controller.hop_elapsed / controller.HOP_SECONDS))
+	var at: Vector3 = controller.player.global_position
 	var target := at + Vector3(1.7, 1.4, -1.1)
 	var weight := 1.0 if not initialized else 1.0 - exp(-4.5 * delta)
 	focus = focus.lerp(target, weight)

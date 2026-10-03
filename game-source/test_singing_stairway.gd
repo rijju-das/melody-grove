@@ -10,6 +10,7 @@ func frames(game: Node, seconds: float) -> void:
 
 func _initialize() -> void:
 	call_deferred("run")
+	create_timer(30).timeout.connect(func(): push_error("Singing check timed out"); quit(1))
 
 func run() -> void:
 	var levels: Array[float] = [0.001, 0.001, 0.001, 0.20, 0.001, 0.001]
@@ -90,10 +91,10 @@ func run() -> void:
 			if step == 0 and i >= 16 and i < 22: hz = 0
 			game.singing.sample(hz)
 			frames(game, 1.0 / 60)
-		assert(game.hopping)
+		assert(not game.hopping, "Singing blooms the tree without a jump")
 		frames(game, 0.6)
 		assert(game.lesson.score == (step + 1) * 20)
-		assert(game.route_index == step + 1)
+		assert(game.stairway.complete_count == step + 1)
 	assert(game.lesson.phase == "complete" and game.lesson.total() == 450 and game.lesson.stars == 3)
 	assert(not game.singing.enabled)
 	game.start_stage(4)
@@ -123,7 +124,7 @@ func run() -> void:
 	assert(game.transitioning and game.travel_points[-1] == game.stairway.center)
 	frames(game, 10)
 	assert(game.lesson.stage == 4 and not game.transitioning)
-	print("SINGING STAIRWAY PASS: legacy saves, locks, playback guard, pitch hold, gentle retry, five climbs, rewards, practice isolation, mic pause, range, continuous entry")
+	print("SINGING TREE PASS: legacy saves, locks, playback guard, pitch hold, gentle retry, five blossoms, rewards, practice isolation, mic pause, range, continuous entry")
 	scene.queue_free()
 	await process_frame
 	quit()

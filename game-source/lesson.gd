@@ -1,6 +1,6 @@
 extends RefCounted
 ## Deterministic lesson rules, independent of rendering and audio.
-const TITLES := ["Find the notes", "Echo meadow", "Canopy concert", "Singing stairway"]
+const TITLES := ["Whispering Meadow", "Echo Clearing", "Broken Brook", "Singing Tree"]
 const MELODIES := [[], [[0, 2, 4], [4, 2, 0], [0, 1, 2]], [[0, 2, 4, 2], [2, 3, 4, 7], [7, 4, 2, 0]], [[0], [1], [2], [1], [0]]]
 const MAX_SCORES := [80, 120, 150, 100]
 var records: Array = []

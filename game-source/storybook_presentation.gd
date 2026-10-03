@@ -43,17 +43,7 @@ func setup(controller: Node) -> void:
 		elif index == 2:
 			for arena in game.canopy.arenas: _border(garden, arena.center, 6)
 		else:
-			var center: Vector3 = game.stairway.center
-			# A layered distant forest replaces the empty sky behind the singing tree.
-			_sphere(garden, center + Vector3(0, -8.2, -4), Vector3(14, 2.3, 10), "496d58")
-			_sphere(garden, center + Vector3(-12, -9, -21), Vector3(18, 7, 8), "6e9181")
-			_sphere(garden, center + Vector3(15, -10, -25), Vector3(20, 9, 9), "92b1a1")
-			for i in range(5):
-				_tree(garden, center + Vector3(-15 + i * 7.0, -7.0, -17 - (i % 2) * 4), 10 + (i % 3) * 2.5, i)
-			for i in range(5):
-				var point: Vector3 = game.stairway.pads[i].global_position
-				_flower(garden, point + Vector3(-1.25, -0.3, -0.2), i)
-			_fireflies(garden, center + Vector3(0, 5, -3), 9)
+			_fireflies(garden, game.stairway.center + Vector3(0, 2, -3), 9)
 	# Give the original imported crowns a gentle, slow breeze as well.
 	for section in game.stage_path.sections.slice(0, 2):
 		var count := 0
@@ -152,7 +142,7 @@ func _process(delta: float) -> void:
 	was_hopping = game.hopping
 	landing = maxf(0, landing - delta)
 	var squash := sin((1.0 - landing / 0.3) * PI) * 0.14 if landing > 0 else 0.0
-	var stretch := sin(PI * game.hop_elapsed / game.HOP_SECONDS) * 0.10 if game.hopping else 0.0
+	var stretch := 0.0
 	avatar.scale = Vector3(1 + squash * 0.65 - stretch * 0.4, 1 - squash + stretch, 1 + squash * 0.65 - stretch * 0.4) * 1.12
 	avatar.position.y = sin(age * 2.3) * 0.014 if not game.hopping else 0.0
 	if head: head.rotation.z = sin(age * 1.2) * 0.035

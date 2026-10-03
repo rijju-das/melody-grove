@@ -2,7 +2,9 @@ extends SceneTree
 class NoSaveController extends "res://melody_controller.gd":
 	func _save_progress() -> void: pass
 	func _load_progress() -> void: pass
-func _initialize() -> void: call_deferred("run")
+func _initialize() -> void:
+	call_deferred("run")
+	create_timer(60).timeout.connect(func(): push_error("Scenery check timed out"); quit(1))
 func visible_details(node: Node, result: Array) -> void:
 	if node is GeometryInstance3D and node.is_visible_in_tree(): result.append(node)
 	for child in node.get_children(): visible_details(child, result)
@@ -66,7 +68,12 @@ func run() -> void:
 		if child.get_script() == preload("res://storybook_presentation.gd"): living = child.foliage
 	assert(living != null and living.ponds.size() == 2 and living.plants.size() > 40)
 	game.paused = false
-	var flower = living.plants[0].node
+	var flower: Node3D
+	for item in living.plants:
+		if item.node.is_visible_in_tree():
+			flower = item.node
+			break
+	assert(flower != null, "Visible Blender foliage is present")
 	var before: Vector3 = flower.rotation
 	living._process(0.5)
 	assert(not flower.rotation.is_equal_approx(before), "Blender flowers move while playing")

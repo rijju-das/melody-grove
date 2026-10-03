@@ -1,290 +1,153 @@
-# Melody Grove
+# Melody Grove — The Sleeping Forest
 
-A four-stage musical forest game made with Blender and Godot. Move a character
-between note platforms, listen, sing along, and build musical memory.
+A four-stage musical adventure made with Blender and Godot. The forest has
+forgotten its song. Follow a firefly, awaken musical flowers, help the forest
+choir, and restore a great tree with your voice.
 
-## Forest valley view
+This is the **ground-walking experiment**, on branch `ground-walking-adventure`.
+The original platform game is preserved on `main` at commit `ee7d892`, tagged
+`platform-version-backup-2026-10-03`. Nothing in this branch has been published.
+GitHub Pages continues to serve `docs` from `main` until that is deliberately updated.
 
-Stages 1 and 2 now sit inside a continuous forest valley with original Blender
-cedars, layered rock ridges, reeds and an irregular pond surface. Stage 1 uses a
-closer perspective camera; Wide view and the memory stages retain overhead
-framing so notes remain selectable. Distant trees omit shadows, grass is batched,
-and the game targets 30 FPS on both desktop and web.
+## Play locally
 
-The editable new kit is `art-source/forest_valley.blend`, rebuilt with Blender's
-background runner and `tools/build_forest_valley.py`. The three GLBs total about
-270 KB. `forest_valley.gd` places the shared assets and generates continuous land;
-the pine and rock shaders tune their colours for the game lighting. The pond uses
-animated surface normals and sky reflections without screen-space reflections.
-The saved editor preview is regenerated from this same scenery.
+Open `game-source/project.godot` in Godot 4.7.2 and press Play.
+The native working copy is also synced to the sibling `melody-grove-godot` folder.
+For the website, serve `docs` over HTTP; microphone access requires localhost
+or HTTPS. The compressed WebAssembly is loaded by the custom welcome page.
+Open `index.html` through the server, rather than the engine's `game.html`.
 
-`test_valley_view.gd` checks perspective/wide view and portrait framing, captures
-all stages and reports frame timings. On the M2 MacBook Air (8 GB), the 1152×800
-native test held approximately 30 FPS in all four stages, with stage-one p95 frame
-time around 34 ms. This is a short desktop measurement, not a sustained thermal
-or physical iPhone/Android performance guarantee.
+- **WASD / arrows:** walk in four directions relative to the camera.
+- **Click or tap the ground:** walk there. The hollow tree blocks the route;
+  destinations beyond the clearing are ignored.
+- **Click/tap a flower or press 1–8:** walk to that note. In memory lessons,
+  first listen to the melody.
+- **Pause briefly on a flower:** hear/select its note. Walking past does not
+  trigger it. Step away and return, or tap it again, to repeat the same note.
+- **L / Listen:** hear the memory lesson. **Space:** repeat the current note.
+- **P / Escape:** pause. **R:** restart the stage. **C:** stage-one wide view.
 
-## Storybook visual pass
+The camera follows exploration and stage passages; memory lessons use a wider
+view that gently tracks movement while keeping the flower circle readable.
+The compact bottom panel keeps retry, volume and other settings out of the way.
+Touch targets, rewards, celebrations, Next stage and unlocked-stage replay remain.
 
-The full living forest pass replaces the old round trees with the sculpted trunks
-and individual-leaf canopies from the approved Blender preview. Curled broadleaves,
-ferns, cupped flowers, mossy rocks and batched grass decorate the paths in all
-four stages. Textured moss replaces the flat meadow colours, with softer lighting.
-The two ground-level forest ponds have expanding, fading rings, lily pads and
-stone banks. Their surfaces move gently. Animation stops
-on pause and hidden sections skip their updates. Water uses a small opaque shader
-without screen reflections or refraction, suitable for the web compatibility renderer.
-The treetop, singing tree and opening tree gates use the Blender tree assets while
-keeping their playable layouts. Grass and plants leave note labels visible.
+## Four chapters
 
-`art-source/living_grove_foliage.blend` contains the editable foliage kit.
-`tools/export_living_foliage.py` rebuilds it and the six shared GLBs from the sibling
-`blender-previews/living-grove/living-grove-preview.blend` study when that source is
-available. Fine side veins and tiny stamens are omitted from game meshes.
-`living_forest.gd` handles plant movement and `living_water.gdshader` draws the
-pond ripples. These decorations are installed when Play starts.
-The main scene also includes `editor_forest.scn`, a saved stage-one view of the
-same scenery, materials and bridge, so the 3D editor shows the current forest.
-`grove_view.gd` removes that static preview before the interactive stages start;
-the player remains a single, separate scene node. After changing scenery builders,
-regenerate the preview with Godot:
-`godot --headless --path game-source --script test_bake_editor_forest.gd`.
-Edit the original Blender assets and scenery builders rather than this generated
-preview. Foliage and water animation run during Play.
-`art-source/living_grove_scenery.blend` holds the full tree/rock/grass/lily kit;
-`tools/export_forest_scenery.py` extracts it from the same approved preview.
-`forest_scenery.gd` shares its meshes between stages and `forest_ground.gdshader`
-adds moss detail without downloading external textures.
+1. **Whispering Meadow:** follow the firefly to eight flower patches. Each new
+   note blooms and gives one 10-point gem. Awaken the little bird at the exit.
+2. **Echo Clearing:** a hollow tree remembers three three-note melodies.
+   Listen to the glowing flowers, then walk to repeat the sequence. A wrong
+   answer returns to the centre for another try; Listen is always available.
+3. **Broken Brook:** help the robin, wren and finch through three four-note
+   melodies. Each restored song brings water and birds back to a section of
+   the brook and opens a root-and-wood crossing to the next clearing. The first
+   round shows every note, the second shows the first, and the third is by ear.
+   Show hint is always free.
+4. **Singing Tree:** remain on the ground beneath the tree. Listen, then sing
+   or hum Do → Re → Mi → Re → Do. Each sustained match opens another blossom,
+   lights its branch and awards 20 points. There is no climbing or jumping.
 
-The welcome page uses a deep forest palette, a fresh gameplay image, clearer stage
-cards and responsive phone layouts. Its styling is isolated in `docs/welcome.css`.
-The download estimate includes the new scenery (about 21 MB).
+Scores and unlock rules are unchanged: maxima 80, 120, 150 and 100 points;
+450 total and 12 stars. Memory lessons give 10 points per note in a completed
+melody, plus a 30-point stage bonus reduced by 5 per mistake (minimum zero).
+Mistakes never lock a player out of progression. Replays improve best scores;
+collecting the same flower repeatedly does not generate extra points.
 
-Musical platforms have bark sides and concentric wood grain. Smaller coloured
-insets keep each note recognisable and preserve listening highlights. The shader
-is `stump_wood.gdshader`; `stump_materials.gd` shares its setup across stages.
+## Progress and reverting
 
-The playable character is a rounded Blender explorer with a leaf cap, teal coat,
-scarf and satchel. The runtime animates its shoulder and hip pivots, adds blinking
-and idle movement, and gives jumps a small stretch and landings a squash and
-fading ring. Flowers, moving crowns and small fireflies decorate the paths; the
-singing tree has a layered forest background. Decorations only animate in visible
-sections and pause with the game. Lighting and 2× edge smoothing keep the forms
-readable without adding heavy post-processing.
+The experiment uses its own save location:
+- Native: `user://grove-ground-progress.json`.
+- Web: localStorage `melody-grove-ground-progress-v1`.
 
-The explorer is saved directly under `Player` in `main.tscn`, so it appears in
-the editor as well as during play. The original character has been removed from the forest GLB;
-the playable character stays outside the duplicated forest sections.
+Platform-version progress remains in its original locations. The experiment
+starts fresh. Completed stages and best scores persist; unfinished attempts
+restart when leaving or reloading.
 
-Edit `art-source/storybook_explorer.blend` in Blender, or regenerate that file and
-`game-source/assets/storybook_explorer.glb` with Blender's background runner and
-`tools/build_storybook_explorer.py`. The builder replaces those two generated
-files, so save manual Blender edits separately before regenerating. Godot imports
-the GLB automatically. `game-source/storybook_presentation.gd` owns the decorative
-effects; lesson rules and pitch recognition remain in their existing scripts.
+The complete original game is also saved outside this repository under
+`../backups/platform-version-2026-10-03/`. Open
+`playable-platform-version/game-source/project.godot` for the old playable game.
+That folder includes a ZIP of the committed source, Blender art and web export,
+and `RESTORE.txt`. To return the repository to the old version, first commit or
+otherwise preserve experiment changes, then switch to `main` or the backup tag.
+Do not use a destructive reset or discard changes to switch versions.
 
-For a visual check, run `game-source/test_storybook_view.gd` with Godot's Dummy
-audio driver. It captures all four stages and an explorer close-up in the sibling
-`godot-diagnostics` folder without reading or writing the player's saved progress.
+## Microphone lesson
 
-## Play
+Tap Enable microphone, grant permission, and stay quiet during calibration.
+Tap Listen, wait for playback and the quiet gap to finish, then sing or hum.
+A match within 65 cents, sustained for 0.55 seconds, opens a blossom. Octave
+matches are accepted. Brief dropouts have a 0.16-second grace period. Wrong or
+missing pitch gives guidance without removing points.
 
-GitHub Pages serves the `docs` folder on `main`:
-https://rijju-das.github.io/melody-grove/
+Two vertical bars appear on the right: absolute microphone/reference pitch,
+and Hold to bloom. The whole pitch bar changes height with frequency, including
+reference playback; loudness does not change its height. Green indicates a match.
+Microphone enable, Listen and voice settings remain in the bottom panel.
+Lower/higher ranges and listening-only practice remain available. Practice
+never awards singing points or records completion.
 
-Touch controls work in portrait and landscape. On a computer, use arrow keys or
-WASD to hop in stage 1, 1–8 to jump to notes in stages 2 and 3, Space to hear the
-current note, L to hear the melody, R to retry, and P to pause. In stage 1, C
-switches between follow and wide views. Stages 1–3 need no microphone. Stage 4 uses live, on-device pitch feedback; audio is never recorded or uploaded.
-
-In stage 1, tap any visible note platform to jump directly to it, hear the note,
-and collect its gem. Tapping a collected platform plays its note again without
-adding duplicate points. Keyboard movement remains available; Back/Next and Play note are under Settings.
-
-All stages use the same compact bottom bar. Settings reveals retry, volume, and
-sound check; stage 1 also offers movement buttons there.
-
-In stages 2 and 3, click/tap any note platform or press **1–8** to jump directly to it.
-Landing chooses that note automatically. The camera keeps the whole circle in view.
-
-The camera smoothly follows the player between platforms and pulls back during
-melody demonstrations. Use **Wide view** for a view of the whole forest. Golden
-gems spin above uncollected notes; each pickup flies to the top points counter
-with a **+10** reward. The gem count and points show the current stage attempt.
-Completed melodies also animate their points into the counter. Retrying resets
-the attempt counter while preserving saved best scores. The web interface
-respects the device’s reduced-motion preference for collection effects.
-
-## Stage celebrations and connected paths
-
-Completing a stage opens a gold-and-green success card with earned stars and a
-large Next stage button. An original 3.2-second victory jingle with synthesized
-applause plays once per attempt and respects the game volume (including mute).
-The sound is bundled with the game for offline play; it does not require a
-network voice service. The celebration text says which stage you completed.
-
-Next stage opens two trees and walks the character along the remaining note
-platforms and a wooden footbridge into the next forest section. The follow
-camera travels with the player; pause also pauses the crossing. The sections
-reuse the Blender forest meshes, with only the current section rendered after
-arrival to limit load. Choosing a stage from the menu starts directly in that
-section. After stage four, the success card returns to the journey menu.
-
-## Stages and points
-
-1. **Find the notes:** collect all eight golden gems. Each different note earns
-   10 points once. All eight unlock stage 2 and award three stars.
-2. **Echo meadow:** start in the centre of eight circular note platforms. Listen
-   to three melodies of three notes each, watch their platforms glow, and jump
-   to repeat each sequence. Low Do (C4) and high Do (C5) are labelled separately.
-3. **Canopy concert:** cross three treetop clearings, each with a four-note melody.
-   Tap the musical lantern to listen, then tap platforms to jump and answer.
-   The first clearing lights every note, the second lights only the first note,
-   and the third plays by ear. Four markers track each answer.
-4. **Singing stairway:** listen and sing Do → Re → Mi → Re → Do, one note at a time,
-   to climb five platforms around a tree. Each step earns 20 points once.
-
-In stage 2, tap the **Listening Glade** in the centre (follow the arrow), then
-jump to the notes in order. Tap the glade again to replay, or press L. The compact
-bottom bar shows progress and pause; the settings button reveals retry and volume. You can jump from any
-platform to any other, including jumping in place to repeat the same note.
-Three markers show your progress. A wrong note gives a gentle wobble and returns
-you to the centre; only the current sequence resets. Completed melodies and
-their points remain. Listen again is free and returns you to the centre before
-replaying. Finish a melody to earn 30 points, then listen to the next one.
-
-In stage 3, **Show hint** replays the full glowing sequence for free, from any
-clearing. Ordinary replay returns to that clearing's normal clue level. During
-sound-only notes, neither the platforms nor the status text reveals the answer.
-A wrong choice gently returns the player to the centre and resets only the
-current sequence. Previously earned points remain.
-
-Each completed Stage 3 melody earns 40 points and grows a wooden branch bridge.
-The character walks continuously to the next clearing while the camera follows;
-pause freezes both bridge growth and movement. The final melody lights the
-canopy, brings out a little bird audience, and opens the applause celebration.
-There is no timer or microphone requirement. Retry starts at the first clearing
-and closes the bridges while retaining saved best scores.
-
-In stages 2 and 3, each completed melody earns 10 points per note. The stage bonus is 30 points,
-minus 5 per mistake, with a minimum of zero. Zero mistakes earns three stars;
-one to three mistakes earns two; four or more earns one. Completing all three
-melodies unlocks the next stage regardless of mistakes. Stages 1–3 total 350 points; Stage 4 adds 100. Maximum total: 450 points and 12 stars.
-
-Completed stages, best scores and best stars are saved on this device. Replays
-improve a best score rather than repeatedly adding points. An unfinished attempt
-restarts when leaving/reloading the game; completed progress stays saved.
-
-## Stage 4 microphone singing
-
-Complete stage 3, then choose Next stage to walk into the stairway, or select it
-from the journey menu. Existing three-stage saves automatically unlock it.
-
-Tap **Enable microphone**, allow access, and stay quiet for the 1.5-second room
-check. Tap **Listen** to hear the next target. After playback and a short quiet
-gap, sing or hum a steady note. The indicator suggests higher or lower; holding
-within 65 cents for 0.55 seconds of voiced input lights the platform and triggers a jump. Wrong
-or unvoiced input never removes points or counts as a mistake. All five steps
-earn 100 points and three stars. The same note one octave below or above also counts;
-brief detection gaps up to 0.16 seconds preserve the hold without adding progress. There is no timer, loudness bonus or replay farming.
-
-Microphone level, detected note and hold meters distinguish missing input from
-pitch mismatch. Calibration uses a quieter percentile rather than the loudest
-setup noise, and native input stalls report a permission/device check.
-
-**Voice settings** offers C3–E3 (lower) and C4–E4 (higher). Changing range cancels
-the current demo/answer and requires listening again. **Listening-only practice**
-lets the player listen, sing along and manually advance, without points, stars or
-saved completion. Retry stage switches back to the scored microphone lesson.
-
-The website uses getUserMedia plus local Web Audio pitch detection. No recording,
-upload, speech recognition, API key or backend is involved. Microphone permission
-is requested only by the enable button. Tracks stop on pause, Home, stage change,
-retry, completion, page hide, device disconnection or audio interruption. Re-enable
-explicitly after a pause. Input is disabled during the reference note and only
-fresh pitch samples can fill the hold meter. Sound check is disabled in stage 4
-to avoid treating that tone as a sung answer. Replay is free.
-
-GitHub Pages HTTPS or localhost is required for microphone access. Denial, missing
-hardware, noise and interruptions show guidance; practice remains available. The
-browser may keep its microphone indicator on while waiting between sung notes,
-because the permitted track is allocated but disabled during playback. Headphones
-reduce room echo. Permission, speaker echo, quiet voices and interruptions must
-still be checked on a real iPhone/Android phone; browser automation uses synthetic
-microphone audio and does not prove physical-device behaviour.
-
-The native Godot source includes a muted AudioEffectCapture adapter and local
-pitch detection. Native input is enabled in project settings, with the web override
-disabled because the browser owns microphone access. Future iOS exports need the
-microphone usage description and a play-and-record audio session; Android exports
-need RECORD_AUDIO permission. No signed native mobile package is included here.
+Audio is processed locally, with no recording, upload, API key or backend.
+Capture stops on pause, stage change, retry, completion and page hide. Re-enable
+it explicitly after a pause. The browser asks for permission; if refused, the
+help dialog explains device settings and offers retry or practice.
+Physical iPhone/Android microphone and performance testing is still required;
+automated browser checks use synthetic microphone audio.
 
 ## Phone installation
 
-Open the site online and wait for **Ready offline**. On iPhone, use Safari's
-Share > Add to Home Screen. On Android, use Chrome's Install app / Add to Home
-screen. Open the installed icon once online and confirm Ready offline.
-Device storage clearing can remove the saved game and progress.
+After publishing to HTTPS, open the site and wait for Ready offline. On iPhone,
+use Safari → Share → Add to Home Screen. On Android, use Chrome → Install app /
+Add to Home Screen. Open the installed icon once online and confirm Ready offline.
+Clearing website storage can remove downloads and saves. This is an installable
+web game; this branch does not contain a signed iOS or Android app.
 
-Use Sound check if needed. Raise phone volume and disable Silent Mode if the
-browser still silences notes. Supported iPhone browsers use a playback audio
-session. Physical phone testing remains necessary.
+## Source and visuals
 
-## Source and updates
+- `art-source/`: editable Blender explorer, foliage and forest-valley kits.
+- `game-source/ground_world.gd`: flower meadow, firefly, brook restoration and paths.
+- `game-source/ground_walk.gd`: walking, tap routing, bounds, obstacles and note dwell.
+- `game-source/ground_flower.gd`: flower patches with shared merged flower meshes.
+- `game-source/memory_arena.gd`: flower-circle lessons and listening feedback.
+- `game-source/canopy_concert.gd`: the three ground-level choir clearings.
+- `game-source/singing_stairway.gd`: the Singing Tree (filename retained for compatibility).
+- `game-source/lesson.gd`: scoring and progression rules.
+- `game-source/singing_lesson.gd`, `voice_capture.gd`, `docs/voice-input.js`: singing.
+- `docs/`: matching exported game, responsive interface and offline cache.
 
-- `game-source/`: editable Godot 4.7 game; open `project.godot`.
-- `docs/`: ready-to-host web export, touch interface and offline support.
-- `tools/package_web.py`: compresses a fresh export and versions the offline cache.
-- `game-source/test_lessons.gd`: deterministic scoring/progression tests.
-- `game-source/test_follow_camera.gd`: scene-level camera, pickup and reset checks.
-- `game-source/test_success_path.gd`: celebrations, volume and connected-stage checks.
-- `game-source/memory_arena.gd`: shared note platforms, labels, glow and paths.
-- `game-source/canopy_concert.gd`: three treetop clearings, bridges, lanterns and birds.
-- `game-source/singing_stairway.gd`: rising platforms, branches and note lighting.
-- `game-source/singing_lesson.gd`: voice holds, playback gate, practice and rewards.
-- `game-source/voice_capture.gd`: native microphone capture and pitch detection.
-- `docs/voice-input.js`: browser microphone lifecycle and pitch detection.
-- `game-source/test_singing_stairway.gd`: singing rules, progression and entry path.
-- `tools/test_pitch.cjs`: detector tests with harmonics, noise and two sample rates.
-- `tools/test_singing_stairway.cjs`: permission, synthetic voice, phone UI and offline checks.
-- `game-source/test_canopy_concert.gd`: clue levels, hints, movement and scoring.
-- `tools/test_canopy_concert.cjs`: phone play-through, hints, finale and offline saving.
-- `game-source/test_memory_arena.gd`: direct jumps, playback, recovery and scoring.
-- `tools/test_memory_arena.cjs`: phone targets, keyboard/touch, markers and stage 2 journey.
-- `tools/make_success_sound.py`: generates the original bundled victory sound.
-- `tools/test_rewards.cjs`: web collection effects, resets and phone layouts.
-- `tools/test_journey.cjs`: browser play-through; adjust Playwright/runtime paths
-  for your environment before running it.
+The Blender explorer remains a single scene node. Trees, distant mountains,
+animated pond water, grass and flowers use the existing forest assets. Clearings
+are level so walking remains grounded. Large distant terrain is scenery; the
+playable area is bounded. This is a first playable walking adventure, not a
+finished open-world game with unrestricted terrain navigation.
 
-To rebuild, create a single-threaded Godot Web export preset with desktop and
-mobile texture support, export to `docs/game.html`, then run
-`python3 tools/package_web.py`. A matching Godot Web export template is required.
-The generated game.html is an intermediate file; visitors use index.html.
+`editor_forest.scn` is generated from the runtime's stage-one scenery. It is
+removed when Play starts to avoid duplicates. Regenerate it after scenery edits:
 
-To publish, commit the updated docs files to main. In Settings > Pages, select
-Deploy from a branch, main, /docs. Existing installations may need a refresh
-after the new offline copy finishes downloading. The OpenAI-hosted copy is
-separate and remains private.
+```sh
+godot --headless --path game-source --script test_bake_editor_forest.gd
+godot --headless --path game-source --export-release Web ../docs/game.html
+python3 tools/package_web.py
+```
 
-Stage 4 shows two parallel vertical meters on the right: microphone pitch and
-hold-to-jump progress. Pitch uses a fixed musical scale (C3 at 8%, C4 at 50%, C5
-at 92%): the entire Mic pitch bar becomes shorter or taller with the note,
-anchored at its bottom. There is no full-height empty track or centre line.
-During Listen the solid blue bar shows the reference pitch. While singing the
-whole solid bar follows the detected pitch. In quiet gaps it shows a muted bar
-at the target note's height. Hold to jump keeps its fixed height. During singing it follows the detected frequency; green means a
-match. Octave-equivalent notes still score, but their actual heights differ.
-Loudness does not control this meter. Microphone enable, Listen and voice settings
-remain in the bottom panel. Hold a match for 0.55 seconds to jump.
+The Web preset currently references a local no-threads export template; change
+that path on another computer. Offline packaging updates the cache version.
 
-The in-game Stages button on web and phone opens a stage picker. It pauses the
-game and stops microphone capture. Players can replay any unlocked stage; locked
-stages show their prerequisite, and the current stage is marked. Closing the
-menu restores the previous pause state. Switching starts a fresh attempt while
-preserving saved best scores and unlocks on that device.
+## Validation
 
-Microphone setup requests browser permission directly from the Enable microphone
-tap. If access is denied, a recovery dialog offers device-specific Safari/Chrome
-steps, a retry button, and listening-only practice. Voice settings also contains
-Microphone help. The site does not claim to open phone settings or grant itself
-permission, and it never automatically retries capture after returning from settings.
+- `test_ground_adventure.gd`: full four-stage journey, real keyboard input,
+  ground taps, tree obstacle, pause, unique rewards, error recovery, connected
+  passages, brook restoration and simulated pitch without jumping.
+- `test_singing_stairway.gd`: pitch detector, freshness, playback guard, octaves,
+  hold grace, practice isolation, microphone pause and voice range.
+- `test_lessons.gd`: score and save rules.
+- `test_bake_editor_forest.gd` / `test_storybook_view.gd`: editor/runtime scenery.
+- `test_valley_view.gd`: all-stage frame timings and portrait/wide framing.
+- `tools/test_ground_web.cjs`: phone taps, keyboard movement, score and save isolation.
+- `tools/test_stage_picker.cjs`, `tools/test_singing_stairway.cjs`: phone menus,
+  synthetic microphone, UI sizing and offline progress.
+
+The game is capped at 30 FPS. A short 1152×800 test on this M2 Air (8 GB) held
+30 FPS in all four stages, with p95 frame time around 34 ms. This does not measure
+sustained heating or prove performance on physical phones. Older platform-specific
+movement tests are historical; use the ground-adventure checks for this branch.

@@ -15,7 +15,7 @@ func setup(section: Node3D, entry: Vector3) -> void:
 	for i in range(3):
 		var arena := Arena.new()
 		add_child(arena)
-		arena.setup_canopy(section.global_position + Vector3(i * 20, 4 + i * 3, -4 if i == 1 else 0), i)
+		arena.setup_canopy(section.global_position + Vector3(i * 20, 0.06, -4 if i == 1 else 0), i)
 		arenas.append(arena)
 		_decorate(arena, i)
 		# Paths go between the notes, leaving the playable platforms clear.
@@ -30,11 +30,11 @@ func setup(section: Node3D, entry: Vector3) -> void:
 		for j in range(count + 1):
 			var board := MeshInstance3D.new()
 			var mesh := BoxMesh.new()
-			mesh.size = Vector3(1.7, 0.20, 0.46)
+			mesh.size = Vector3(1.7, 0.10, 0.46)
 			board.mesh = mesh
 			board.material_override = arenas[i]._material("d3a96b")
 			add_child(board)
-			board.global_position = from.lerp(to, float(j) / count) - Vector3.UP * 0.16
+			board.global_position = from.lerp(to, float(j) / count) - Vector3.UP * 0.07
 			board.look_at(board.global_position + to - from, Vector3.UP)
 			pieces.append(board)
 		bridges.append(pieces)
@@ -56,12 +56,12 @@ func _sphere(parent: Node3D, at: Vector3, radius: float, color: String, glow := 
 func _decorate(arena: Node3D, index: int) -> void:
 	# Actual Blender trees support the elevated musical clearings.
 	for j in range(3):
-		preload("res://forest_scenery.gd").tree(arena, Vector3(-9 + j * 9, -10, -12), 2.6, j * 1.4)
+		preload("res://forest_scenery.gd").tree(arena, Vector3(-9 + j * 9, 0, -12), 1.4, j * 1.4)
 	for j in range(4):
 		var angle := TAU * j / 4.0
 		var leaves: Node3D = preload("res://assets/living-grove/canopy.glb").instantiate()
 		arena.add_child(leaves)
-		leaves.position = Vector3(cos(angle) * 7.4, -1.8, sin(angle) * 7.4)
+		leaves.position = Vector3(cos(angle) * 8.6, 0, sin(angle) * 8.6)
 		leaves.scale = Vector3.ONE * 1.1
 		leaves.rotation.y = angle
 	var lamp := Node3D.new()
@@ -100,7 +100,7 @@ func _decorate(arena: Node3D, index: int) -> void:
 			var wing := _sphere(bird, Vector3(side * 0.37, 0, -0.05), 0.26, "fff2c8")
 			wing.scale = Vector3(1.4, 0.22, 0.8)
 		creatures.append(bird)
-	arena._label(arena, ["WATCH & REPEAT", "ONE LITTLE CLUE", "PLAY BY EAR"][index], Vector3(0, 0.8, -7.0), 35)
+	arena._label(arena, ["WAKE THE ROBIN", "HELP THE WREN", "CALL THE FINCH"][index], Vector3(0, 0.8, -7.0), 35)
 
 func grow_bridge(index: int, amount: float) -> void:
 	growth[index] = clampf(amount, 0, 1)

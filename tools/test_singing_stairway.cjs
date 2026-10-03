@@ -22,7 +22,7 @@ const assert=require('node:assert/strict');
  const shot=name=>page.screenshot({path:`/Users/rijju/Documents/Blender_2026/godot-diagnostics/singing-${name}.png`,fullPage:true});
  try{
   await page.goto('http://127.0.0.1:4321/');
-  await page.evaluate(()=>localStorage.setItem('melody-grove-progress-v1',JSON.stringify({version:1,records:[80,120,150].map(score=>({complete:true,score,stars:3}))})));
+  await page.evaluate(()=>localStorage.setItem('melody-grove-ground-progress-v1',JSON.stringify({version:1,records:[80,120,150].map(score=>({complete:true,score,stars:3}))})));
   await page.reload();await page.getByText('Ready offline ✓',{exact:true}).first().waitFor({timeout:60000});
   assert(await page.locator('[data-stage="4"]').isEnabled());
   await page.evaluate(()=>{
@@ -89,8 +89,6 @@ const assert=require('node:assert/strict');
    assert.match(await page.locator('#voice-target').textContent(),new RegExp(['Do · C4','Re · D4','Mi · E4','Re · D4','Do · C4'][step]));
    const hz=(await state()).voice.target*(step===0?.5:1);
    await page.evaluate(hz=>{testMic.osc.frequency.value=hz;testMic.gain.gain.value=.2;},hz);
-   await wait(()=>window.testState.hopping);
-   assert.match((await state()).voice.feedback,/Good!/);
    await wait(step=>window.testState.lesson.score===(step+1)*20,step);
    await page.evaluate(()=>testMic.gain.gain.value=0);
    if(step===1){await shot('climb-phone');await page.setViewportSize({width:844,height:390});await page.waitForTimeout(500);await shot('landscape');assert((await page.locator('.controls').boundingBox()).height<135);}
@@ -105,7 +103,7 @@ const assert=require('node:assert/strict');
   await page.locator('#voice-options').tap();await page.locator('#voice-practice').tap();await wait(()=>window.testState.voice.practice);
   for(let i=0;i<5;i++){
    await page.locator('#voice-listen').tap();await wait(()=>window.testState.lesson.phase==='answer');
-   await page.locator('#voice-next').tap();await wait(i=>window.testState.step===i+1&&!window.testState.hopping,i);
+   await page.locator('#voice-next').tap();await wait(i=>(window.testState.lesson.round===i+2||window.testState.lesson.phase==='practice_complete')&&!window.testState.hopping,i);
   }
   assert.equal((await state()).lesson.phase,'practice_complete');assert.equal((await state()).lesson.score,0);
   assert(await page.locator('#complete-dialog').isHidden());
@@ -113,6 +111,6 @@ const assert=require('node:assert/strict');
   await context.setOffline(true);await page.reload();await page.getByText('450 points saved',{exact:true}).waitFor();
   assert.match(await page.locator('[data-stage="4"] .stage-result').textContent(),/100 points/);
   assert.deepEqual(errors,[]);
-  console.log('SINGING WEB PASS: legacy unlock, permission denial/retry, real analyser synthetic voice, pitch guidance, five climbs, 100 points, mic cleanup, practice isolation, phone/landscape and offline save');
+  console.log('SINGING WEB PASS: legacy unlock, permission denial/retry, real analyser synthetic voice, pitch guidance, five blossoms, 100 points, mic cleanup, practice isolation, phone/landscape and offline save');
  }catch(e){await shot('error');console.log(await state());throw e;}finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

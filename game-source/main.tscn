@@ -42,7 +42,7 @@ visible = false
 [node name="EditorForestPreview" parent="." instance=ExtResource("6_editor_forest")]
 
 [node name="Player" type="Node3D" parent="."]
-position = Vector3(-11.705256, 0.85500014, 4.872365)
+position = Vector3(-11.805256, 0.06, 4.372365)
 
 [node name="StorybookExplorer" parent="Player" instance=ExtResource("5_explorer")]
 scale = Vector3(1.12, 1.12, 1.12)
