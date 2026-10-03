@@ -11,6 +11,6 @@ void vertex() { world_position = (MODEL_MATRIX * vec4(VERTEX,1.0)).xyz; }
 void fragment() {
 	float patches = smooth_noise(world_position.xz * 0.6);
 	float detail = smooth_noise(world_position.xz * 10.0);
-	ALBEDO = mix(vec3(0.085,0.16,0.09),vec3(0.19,0.27,0.13),patches) * (0.87 + detail*0.22);
+	ALBEDO = mix(vec3(0.13,0.22,0.115),vec3(0.28,0.38,0.19),patches) * (0.87 + detail*0.22);
 	ROUGHNESS = 0.95;
 }

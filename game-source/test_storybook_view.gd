@@ -101,6 +101,7 @@ func run() -> void:
 	assert(game.player.get_parent() == scene, "Player stays outside duplicated forest sections")
 	game.start_stage(1)
 	camera.set_process(false)
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.position = game.player.global_position + Vector3(3.5, 2.7, 5)
 	camera.look_at(game.player.global_position + Vector3.UP * 1.35)
 	camera.size = 4.3

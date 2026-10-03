@@ -1,5 +1,5 @@
 extends Camera3D
-## Stable isometric follow: track the path height, not the bounce of each hop.
+## Ground-level perspective for exploration, overhead framing for note-memory rounds.
 var controller: Node
 var overview := false
 var focus := Vector3.ZERO
@@ -24,6 +24,14 @@ func _process(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
 	if controller.route.is_empty(): return
+	if (controller.lesson.stage == 1 and not is_overview()) or controller.transitioning:
+		_update_forest_camera(delta)
+		return
+	if projection != Camera3D.PROJECTION_ORTHOGONAL:
+		projection = Camera3D.PROJECTION_ORTHOGONAL
+		keep_aspect = Camera3D.KEEP_WIDTH
+		rotation = Vector3(-0.657394, 0, 0)
+		initialized = false
 	var viewport_size := get_viewport().get_visible_rect().size
 	var aspect := viewport_size.x / maxf(viewport_size.y, 1.0)
 	var target: Vector3
@@ -62,4 +70,25 @@ func _update_camera(delta: float) -> void:
 	size = lerpf(size, target_size, weight)
 	rotation.x = lerpf(rotation.x, -0.95 if controller.lesson.stage in [2, 3] and not controller.transitioning else -0.657394, weight)
 	global_position = focus + global_basis.z * 30.0
+	initialized = true
+
+func _update_forest_camera(delta: float) -> void:
+	if projection != Camera3D.PROJECTION_PERSPECTIVE:
+		projection = Camera3D.PROJECTION_PERSPECTIVE
+		initialized = false
+	keep_aspect = Camera3D.KEEP_HEIGHT
+	fov = 62.0
+	var at: Vector3 = controller.route[controller.route_index]
+	if controller.transitioning:
+		at = controller.travel_position
+	elif controller.hopping:
+		at = at.lerp(controller.route[controller.destination], smoothstep(0, 1, controller.hop_elapsed / controller.HOP_SECONDS))
+	var target := at + Vector3(1.7, 1.4, -1.1)
+	var weight := 1.0 if not initialized else 1.0 - exp(-4.5 * delta)
+	focus = focus.lerp(target, weight)
+	var viewport_size := get_viewport().get_visible_rect().size
+	var portrait := viewport_size.x < viewport_size.y
+	var offset := Vector3(-5.6, 3.5, 10.7) * (1.3 if portrait else 1.0)
+	global_position = focus + offset
+	look_at(focus)
 	initialized = true

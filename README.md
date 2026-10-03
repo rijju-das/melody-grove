@@ -3,6 +3,27 @@
 A four-stage musical forest game made with Blender and Godot. Move a character
 between note platforms, listen, sing along, and build musical memory.
 
+## Forest valley view
+
+Stages 1 and 2 now sit inside a continuous forest valley with original Blender
+cedars, layered rock ridges, reeds and an irregular pond surface. Stage 1 uses a
+closer perspective camera; Wide view and the memory stages retain overhead
+framing so notes remain selectable. Distant trees omit shadows, grass is batched,
+and the game targets 30 FPS on both desktop and web.
+
+The editable new kit is `art-source/forest_valley.blend`, rebuilt with Blender's
+background runner and `tools/build_forest_valley.py`. The three GLBs total about
+270 KB. `forest_valley.gd` places the shared assets and generates continuous land;
+the pine and rock shaders tune their colours for the game lighting. The pond uses
+animated surface normals and sky reflections without screen-space reflections.
+The saved editor preview is regenerated from this same scenery.
+
+`test_valley_view.gd` checks perspective/wide view and portrait framing, captures
+all stages and reports frame timings. On the M2 MacBook Air (8 GB), the 1152×800
+native test held approximately 30 FPS in all four stages, with stage-one p95 frame
+time around 34 ms. This is a short desktop measurement, not a sustained thermal
+or physical iPhone/Android performance guarantee.
+
 ## Storybook visual pass
 
 The full living forest pass replaces the old round trees with the sculpted trunks
@@ -37,7 +58,7 @@ adds moss detail without downloading external textures.
 
 The welcome page uses a deep forest palette, a fresh gameplay image, clearer stage
 cards and responsive phone layouts. Its styling is isolated in `docs/welcome.css`.
-The download estimate includes the new scenery (about 17 MB).
+The download estimate includes the new scenery (about 21 MB).
 
 Musical platforms have bark sides and concentric wood grain. Smaller coloured
 insets keep each note recognisable and preserve listening highlights. The shader

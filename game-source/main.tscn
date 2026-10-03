@@ -7,15 +7,30 @@
 [ext_resource type="PackedScene" path="res://assets/storybook_explorer.glb" id="5_explorer"]
 [ext_resource type="PackedScene" path="res://editor_forest.scn" id="6_editor_forest"]
 
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_valley"]
+sky_top_color = Color(0.26, 0.46, 0.68, 1)
+sky_horizon_color = Color(0.66, 0.77, 0.83, 1)
+ground_bottom_color = Color(0.16, 0.24, 0.19, 1)
+ground_horizon_color = Color(0.66, 0.77, 0.83, 1)
+
+[sub_resource type="Sky" id="Sky_valley"]
+sky_material = SubResource("SkyMaterial_valley")
+
 [sub_resource type="Environment" id="Environment_grove"]
-background_mode = 1
+background_mode = 2
+sky = SubResource("Sky_valley")
 background_color = Color(0.48, 0.63, 0.60, 1)
 ambient_light_source = 2
 ambient_light_color = Color(0.9098039, 0.9411765, 0.9490196, 1)
-ambient_light_energy = 0.45
+ambient_light_energy = 0.42
 reflected_light_source = 1
 tonemap_mode = 2
 tonemap_white = 6.0
+fog_enabled = true
+fog_light_color = Color(0.58, 0.7, 0.8, 1)
+fog_light_energy = 0.8
+fog_density = 0.0025
+fog_sky_affect = 0.2
 
 [node name="Node3D" type="Node3D" unique_id=747091726]
 script = ExtResource("2_view")
@@ -34,9 +49,11 @@ scale = Vector3(1.12, 1.12, 1.12)
 
 [node name="GameCamera" type="Camera3D" parent="."]
 script = ExtResource("4_camera")
-position = Vector3(-1.8052565, 25, 25.872365)
-rotation = Vector3(-0.657394, 0, 0)
-projection = 1
+position = Vector3(-15.605256, 5.755, 14.472365)
+rotation = Vector3(-0.282, -0.482, 0)
+projection = 0
+fov = 62.0
+keep_aspect = 1
 current = true
 size = 25.0
 near = 0.1
@@ -45,10 +62,10 @@ far = 150.0
 [node name="Sunlight" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-55, -30, 0)
 light_color = Color(1, 0.95686275, 0.89411765, 1)
-light_energy = 0.32
+light_energy = 0.45
 light_specular = 0.3
 shadow_enabled = true
-directional_shadow_max_distance = 70.0
+directional_shadow_max_distance = 38.0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_grove")

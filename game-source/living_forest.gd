@@ -33,6 +33,7 @@ func setup(controller: Node) -> void:
 		if pond:
 			var water := ShaderMaterial.new()
 			water.shader = preload("res://living_water.gdshader")
+			pond.mesh = _pond_surface()
 			pond.material_override = water
 			pond.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			ponds.append({"node":pond, "material":water})
@@ -59,14 +60,7 @@ func setup(controller: Node) -> void:
 		plants.append({"node":crown, "rest":crown.rotation, "phase":float(plants.size()) * 0.7, "strength":0.008})
 
 func _ground_height(at: Vector2) -> float:
-	var result := -0.2
-	for mound in [Vector4(0, -1, 13.5, 9.6), Vector4(-4, 4, 7.5, 3.8), Vector4(0, -8.5, 14, 8.5)]:
-		var d := pow((at.x - mound.x) / mound.z, 2) + pow((at.y - mound.y) / mound.w, 2)
-		if d < 1.0:
-			var vertical := 0.45 if mound.x == -4 else 1.1 if mound.y == -8.5 else 1.0
-			var base := -0.15 if mound.x == -4 else -0.65 if mound.y == -8.5 else -0.62
-			result = maxf(result, base + vertical * sqrt(1.0 - d))
-	return result + 0.01
+	return preload("res://forest_valley.gd").terrain_height(at.x, at.y) + 0.01
 
 func _full_forest(section: Node3D) -> void:
 	var ground_material := ShaderMaterial.new()
@@ -81,16 +75,15 @@ func _full_forest(section: Node3D) -> void:
 				var original: Material = item.mesh.surface_get_material(0)
 				if original is StandardMaterial3D: tint = original.albedo_color
 			item.material_override = preload("res://stump_materials.gd").wood(item.mesh.get_aabb().size.x / 2.0, inset, tint)
-		if title.begins_with("Grove_storybook tree") or title.begins_with("Grove_cloud") or title.begins_with("Grove_cottage") or title.begins_with("Grove_tree cottage") or title.begins_with("Grove_roof") or title.begins_with("Grove_morning") or title.begins_with("Grove_distant") or title.begins_with("Grove_ground fern") or title.begins_with("Grove_river stone") or title.begins_with("Grove_flower"):
+		if title in ["MS_Title", "MS_Subtitle"] or title.begins_with("Grove_storybook tree") or title.begins_with("Grove_cloud") or title.begins_with("Grove_cottage") or title.begins_with("Grove_tree cottage") or title.begins_with("Grove_roof") or title.begins_with("Grove_morning") or title.begins_with("Grove_distant") or title.begins_with("Grove_ground fern") or title.begins_with("Grove_river stone") or title.begins_with("Grove_flower"):
 			item.hide()
-		if title in ["Grove_forest floor", "Grove_front moss bank", "Grove_velvet meadow"]:
-			item.material_override = ground_material
+		if title in ["Grove_forest floor", "Grove_front moss bank", "Grove_velvet meadow", "Grove_island earth"]:
+			item.hide()
 	var garden := Node3D.new()
 	garden.name = "FullBlenderForest"
 	section.add_child(garden)
 	var scenery = preload("res://forest_scenery.gd")
-	for i in range(6):
-		scenery.tree(garden, Vector3(-14 + i * 5.8, -0.1, -10.5 - (i % 2) * 4), 1.6 + (i % 3) * 0.25, i * 1.5)
+	preload("res://forest_valley.gd").build(garden)
 	var random := RandomNumberGenerator.new()
 	random.seed = 138
 	var spots: Array[Vector3] = []
@@ -113,9 +106,10 @@ func _full_forest(section: Node3D) -> void:
 		if i % 51 == 0: scenery.rock(garden, pos, random.randf_range(1.5, 3.0), i * 0.7)
 		if i % 35 == 0: add_plant(garden, ["flower_coral","flower_cream","flower_lilac"][i % 3], pos, 1.1, i * 0.3)
 	scenery.grass(garden, spots, 123)
-	for i in range(18):
-		var angle := TAU * i / 18.0
-		scenery.rock(garden, Vector3(5 + cos(angle) * 5.35, 0.20, 4.5 + sin(angle) * 2.7), 1.5 + (i % 3) * 0.4, angle)
+	for i in range(13):
+		var angle := TAU * i / 13.0
+		if i in [1, 5, 9]: continue
+		scenery.rock(garden, Vector3(5 + cos(angle) * 5.25, 0.12, 4.5 + sin(angle) * 2.65), 1.3 + (i % 3) * 0.7, angle)
 	for i in range(3):
 		var lily: Node3D = preload("res://assets/living-grove/lily_pad.glb").instantiate()
 		garden.add_child(lily)
@@ -149,3 +143,20 @@ func _process(delta: float) -> void:
 			strength * 0.55 * cos(t + phase + 0.6))
 	for pond in ponds:
 		if pond.node.is_visible_in_tree(): pond.material.set_shader_parameter("breeze_time", elapsed)
+
+func _pond_surface() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	surface.set_smooth_group(0)
+	for ring in range(12):
+		for segment in range(64):
+			var corners: Array[Vector3] = []
+			for point in [Vector2(ring,segment),Vector2(ring+1,segment),Vector2(ring+1,segment+1),Vector2(ring,segment+1)]:
+				var angle: float = point.y * TAU / 64.0
+				var radius: float = point.x / 12.0 * (0.96 + sin(angle * 3.0)*0.035 + cos(angle*5.0)*0.025)
+				corners.append(Vector3(cos(angle)*radius,1.0,sin(angle)*radius))
+			for i in [0,1,2,0,2,3]:
+				surface.set_normal(Vector3.UP)
+				surface.add_vertex(corners[i])
+	surface.index()
+	return surface.commit()

@@ -28,6 +28,11 @@ func run() -> void:
 	game.set_script(NoSaveController)
 	root.add_child(scene)
 	current_scene = scene
+	if game.stage_path.sections[0].get_node_or_null("FullBlenderForest/ForestValley") == null:
+		push_error("Scenery failed to build; keeping the previous editor preview.")
+		scene.free()
+		quit(1)
+		return
 	var preview := Node3D.new()
 	preview.name = "EditorForestPreview"
 	copy_visible(game.stage_path.sections[0], preview)
